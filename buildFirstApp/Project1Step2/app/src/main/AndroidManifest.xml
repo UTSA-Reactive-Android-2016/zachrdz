@@ -22,7 +22,6 @@
             android:name=".SettingsActivity"
             android:label="@string/title_activity_settings"
             android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -41,7 +40,6 @@
             android:name=".ContactsActivity"
             android:label="@string/title_activity_contacts"
             android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -51,7 +49,6 @@
             android:name=".EditContactActivity"
             android:label="@string/title_activity_edit_contact"
             android:parentActivityName=".ContactsActivity"
-            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -61,12 +58,10 @@
             android:name=".ReadMessageActivity"
             android:label="@string/title_activity_read_message"
             android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.csandroid.myfirstapp.MainActivity" />
         </activity>
     </application>
-
 </manifest>

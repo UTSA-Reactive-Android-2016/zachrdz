@@ -23,6 +23,7 @@ public class ContactsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_contacts);
         Toolbar toolbar = (Toolbar) findViewById(R.id.contacts_toolbar);
         setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         RecyclerView recList = (RecyclerView) findViewById(R.id.contacts_cards_list);
         recList.setHasFixedSize(true);
@@ -51,6 +52,10 @@ public class ContactsActivity extends AppCompatActivity {
             case R.id.action_add_contact:
                 Intent addContactIntent = new Intent(ContactsActivity.this, EditContactActivity.class);
                 startActivity(addContactIntent);
+                return true;
+            case android.R.id.home:
+                // app icon in action bar clicked; goto parent activity.
+                this.finish();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);

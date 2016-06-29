@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<ScrollView android:id="@+id/settings_scrollview"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:fillViewport="true"
+    android:layout_marginTop="?attr/actionBarSize"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -13,66 +19,71 @@
     tools:showIn="@layout/activity_read_message">
 
     <TextView
-        android:layout_width="200dp"
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:height="40dp"
-        android:id="@+id/editText"
+        android:id="@+id/msg_sender"
         android:text="Sender"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
+        android:layout_alignParentStart="false"
+        android:layout_toLeftOf="@+id/msg_ttl" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="TTL"
-        android:id="@+id/textView4"
+        android:id="@+id/msg_ttl"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
-        android:layout_toRightOf="@+id/editText"
-        android:layout_toEndOf="@+id/editText" />
+        android:layout_marginRight="50dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/editText2"
-        android:layout_below="@+id/editText"
+        android:id="@+id/msg_subject"
+        android:layout_below="@+id/msg_sender"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"
-        android:text="Subject" />
+        android:text="Subject"
+        android:layout_marginTop="20dp" />
 
-    <EditText
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="250dp"
         android:inputType="textMultiLine"
         android:ems="10"
-        android:id="@+id/editText3"
-        android:text="Body"
-        android:layout_below="@+id/editText2"
+        android:id="@+id/msg_body"
+        android:layout_below="@+id/msg_subject"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_alignRight="@+id/editText2"
-        android:layout_alignEnd="@+id/editText2" />
+        android:layout_alignRight="@+id/msg_subject"
+        android:layout_alignEnd="@+id/msg_subject"
+        android:gravity="top"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/edittext_bg"
+        android:hint="Body"
+        android:layout_marginBottom="70dp" />
 
     <ImageButton
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:id="@+id/imageButton4"
-        android:layout_below="@+id/editText3"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
         android:background="@drawable/ic_delete_forever_black_48dp"
-        android:paddingTop="5dp" />
+        android:paddingTop="5dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Reply"
         android:id="@+id/button"
-        android:layout_alignTop="@+id/imageButton4"
-        android:layout_centerHorizontal="true" />
+        android:layout_alignParentBottom="true"
+        android:layout_alignRight="@+id/msg_body"
+        android:layout_alignEnd="@+id/msg_body" />
 
 </RelativeLayout>
+</ScrollView>

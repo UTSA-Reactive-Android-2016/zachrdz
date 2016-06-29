@@ -2,12 +2,15 @@ package com.csandroid.myfirstapp;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
+import com.csandroid.myfirstapp.models.Message;
 
 import java.util.List;
 
@@ -16,9 +19,9 @@ import java.util.List;
  */
 public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageViewHolder> {
 
-    private List<MessageInfo> messageList;
+    private List<Message> messageList;
 
-    public MessageAdapter(List<MessageInfo> messageList) {
+    public MessageAdapter(List<Message> messageList) {
         this.messageList = messageList;
     }
 
@@ -30,17 +33,29 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
 
     @Override
     public void onBindViewHolder(MessageViewHolder messageViewHolder, int i) {
-        MessageInfo ci = messageList.get(i);
+        final Message ci = messageList.get(i);
 
-        messageViewHolder.vSender.setText(ci.sender);
-        messageViewHolder.vSubject.setText(ci.subject);
-        messageViewHolder.vTTL.setText(ci.ttl);
+        messageViewHolder.vSender.setText(ci.getSenderUsername());
+        messageViewHolder.vSubject.setText(ci.getSubject());
+        messageViewHolder.vTTL.setText(Integer.toString(ci.getTTL()));
 
         messageViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
+
             @Override
             public void onClick(View v) {
+
                 Context context = v.getContext();
                 Intent intent = new Intent(context, ReadMessageActivity.class);
+
+                //Create the bundle
+                Bundle bundle = new Bundle();
+
+                //Add your data to bundle
+                bundle.putString("message_id", Integer.toString(ci.getId()));
+
+                //Add the bundle to the intent
+                intent.putExtras(bundle);
+
                 context.startActivity(intent);
             }
         });
@@ -68,7 +83,6 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
             vSubject = (TextView) v.findViewById(R.id.subject);
             vTTL = (TextView) v.findViewById(R.id.ttl);
         }
-
 
     }
 

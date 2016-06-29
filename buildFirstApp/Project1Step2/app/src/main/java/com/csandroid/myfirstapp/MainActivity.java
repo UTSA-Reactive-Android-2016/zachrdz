@@ -1,18 +1,26 @@
 package com.csandroid.myfirstapp;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.csandroid.myfirstapp.db.MessageDBHandler;
+import com.csandroid.myfirstapp.models.Message;
+
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+
+    private MessageDBHandler db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,7 +37,16 @@ public class MainActivity extends AppCompatActivity {
         llm.setOrientation(LinearLayoutManager.VERTICAL);
         recList.setLayoutManager(llm);
 
-        MessageAdapter ma = new MessageAdapter(createList(3));
+        boolean dbExists = this.doesDatabaseExist(this.getApplicationContext(), "reactiveApp");
+
+        this.db = new MessageDBHandler(this);
+
+        // Create 3 fake messages when the db is initially created
+        if(!dbExists) {
+            this.createFakeMessages();
+        }
+
+        MessageAdapter ma = new MessageAdapter(createList());
         recList.setAdapter(ma);
     }
 
@@ -63,19 +80,24 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private List<MessageInfo> createList(int size) {
+    private List<Message> createList() {
+        List<Message> messages = this.db.getAllMessages();
 
-        List<MessageInfo> result = new ArrayList<MessageInfo>();
-        for (int i=1; i <= size; i++) {
-            MessageInfo ci = new MessageInfo();
-            ci.sender = MessageInfo.SENDER_PREFIX + i;
-            ci.subject = MessageInfo.SUBJECT_PREFIX + i;
-            ci.ttl = MessageInfo.TTL_PREFIX + i;
+        return messages;
+    }
 
-            result.add(ci);
-        }
+    private static boolean doesDatabaseExist(Context context, String dbName) {
+        File dbFile = context.getDatabasePath(dbName);
+        return dbFile.exists();
+    }
 
-        return result;
+    private void createFakeMessages(){
+        this.db.addMessage(new Message("johndoe", "Really Important, read immediately!",
+                "This is a super important, secret message!", 10));
+        this.db.addMessage(new Message("mikejones", "Hows it going?",
+                "Just wanted to see what you were up to...", 20));
+        this.db.addMessage(new Message("stacyp", "Let me know if you get this.",
+                "This is my message with stuff...", 30));
     }
 
 }

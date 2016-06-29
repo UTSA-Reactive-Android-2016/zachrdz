@@ -3,16 +3,14 @@ package com.csandroid.myfirstapp;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.TextView;
 
 public class ComposeActivity extends AppCompatActivity {
 
@@ -22,8 +20,9 @@ public class ComposeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_compose);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        EditText et = (EditText) findViewById(R.id.editText);
+        EditText et = (EditText) findViewById(R.id.msg_sender);
         Button sendBtn = (Button) findViewById(R.id.button);
         ImageButton deleteBtn = (ImageButton) findViewById(R.id.imageButton4);
         ImageButton ttlBtn = (ImageButton) findViewById(R.id.imageButton5);
@@ -70,6 +69,18 @@ public class ComposeActivity extends AppCompatActivity {
                 builder.show();
             }
         });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case android.R.id.home:
+                // app icon in action bar clicked; goto parent activity.
+                this.finish();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
 }
