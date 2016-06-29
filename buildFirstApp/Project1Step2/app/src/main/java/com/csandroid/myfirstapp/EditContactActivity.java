@@ -10,9 +10,18 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.csandroid.myfirstapp.db.ContactDBHandler;
+import com.csandroid.myfirstapp.db.MessageDBHandler;
+import com.csandroid.myfirstapp.models.Contact;
+import com.csandroid.myfirstapp.models.Message;
 
 public class EditContactActivity extends AppCompatActivity {
+
+    private int contactId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,25 +31,30 @@ public class EditContactActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        Button saveBtn = (Button) findViewById(R.id.button2);
         ImageButton deleteBtn = (ImageButton) findViewById(R.id.imageButton2);
 
-
-        saveBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent contactsIntent = new Intent(EditContactActivity.this, ContactsActivity.class);
-                startActivity(contactsIntent);
-            }
-        });
 
         deleteBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent contactsIntent = new Intent(EditContactActivity.this, ContactsActivity.class);
+                ContactDBHandler db = new ContactDBHandler(v.getContext());
+                Contact contact = db.getContact(EditContactActivity.this.contactId);
+                db.deleteContact(contact);
+                Toast.makeText(v.getContext(), "Deleted contact: " + contact.getUsername(),
+                        Toast.LENGTH_LONG).show();
                 startActivity(contactsIntent);
             }
         });
+
+        //Get the bundle
+        Bundle bundle = getIntent().getExtras();
+
+        //Extract the data…
+        String contactId = bundle.getString("contact_id");
+        this.contactId = Integer.parseInt(contactId);
+
+        this.populateFields();
 
     }
 
@@ -56,4 +70,16 @@ public class EditContactActivity extends AppCompatActivity {
         }
     }
 
+    public void populateFields(){
+        TextView username = (TextView)findViewById(R.id.username);
+        ImageView userImage = (ImageView)findViewById(R.id.userImage);
+        TextView publicKey = (TextView)findViewById(R.id.publicKey);
+
+        ContactDBHandler db = new ContactDBHandler(this);
+
+        Contact contact = db.getContact(this.contactId);
+
+        username.setText(contact.getUsername());
+        publicKey.setText(contact.getPublicKey());
+    }
 }

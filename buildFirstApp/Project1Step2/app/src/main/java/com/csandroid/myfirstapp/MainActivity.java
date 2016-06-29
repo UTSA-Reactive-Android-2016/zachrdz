@@ -21,6 +21,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private MessageDBHandler db;
+    private RecyclerView recList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,13 +32,13 @@ public class MainActivity extends AppCompatActivity {
         getSupportActionBar().setDisplayShowTitleEnabled(false);
 
         //Recycler view stuff
-        RecyclerView recList = (RecyclerView) findViewById(R.id.main_cards_list);
+        recList = (RecyclerView) findViewById(R.id.main_cards_list);
         recList.setHasFixedSize(true);
         LinearLayoutManager llm = new LinearLayoutManager(this);
         llm.setOrientation(LinearLayoutManager.VERTICAL);
         recList.setLayoutManager(llm);
 
-        boolean dbExists = this.doesDatabaseExist(this.getApplicationContext(), "reactiveApp");
+        boolean dbExists = this.doesDatabaseExist(this.getApplicationContext(), "reactiveAppMessages");
 
         this.db = new MessageDBHandler(this);
 
@@ -80,6 +81,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();  // Always call the superclass method first
+
+        // When the view is brought back into focus, reload messages
+        // list to make sure user doesn't see stale data.
+        MessageAdapter ma = new MessageAdapter(createList());
+        recList.setAdapter(ma);
+        recList.invalidate();
+    }
+
     private List<Message> createList() {
         List<Message> messages = this.db.getAllMessages();
 
@@ -93,11 +105,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void createFakeMessages(){
         this.db.addMessage(new Message("johndoe", "Really Important, read immediately!",
-                "This is a super important, secret message!", 10));
+                "This is a super important, secret message!", 5));
         this.db.addMessage(new Message("mikejones", "Hows it going?",
-                "Just wanted to see what you were up to...", 20));
+                "Just wanted to see what you were up to...", 15));
         this.db.addMessage(new Message("stacyp", "Let me know if you get this.",
-                "This is my message with stuff...", 30));
+                "This is my message with stuff...", 300));
     }
 
 }

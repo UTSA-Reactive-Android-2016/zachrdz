@@ -62,5 +62,15 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.csandroid.myfirstapp.MainActivity" />
         </activity>
+        <activity
+            android:name=".AddContactActivity"
+            android:label="@string/title_activity_add_contact"
+            android:parentActivityName=".ContactsActivity"
+            android:theme="@style/AppTheme.NoActionBar">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.csandroid.myfirstapp.ContactsActivity" />
+        </activity>
     </application>
+
 </manifest>

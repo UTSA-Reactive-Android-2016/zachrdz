@@ -14,4 +14,5 @@
     <string name="button_add_contact">Add Contact</string>
     <string name="title_activity_edit_contact">EditContactActivity</string>
     <string name="title_activity_read_message">ReadMessageActivity</string>
+    <string name="title_activity_add_contact">AddContactActivity</string>
 </resources>

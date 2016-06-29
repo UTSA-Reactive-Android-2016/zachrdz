@@ -17,7 +17,7 @@ public class MessageDBHandler extends SQLiteOpenHelper{
     // Database Version
     private static final int DATABASE_VERSION = 1;
     // Database Name
-    private static final String DATABASE_NAME = "reactiveApp";
+    private static final String DATABASE_NAME = "reactiveAppMessages";
     // Contacts table name
     private static final String TABLE_MESSAGES = "messages";
     // Shops Table Columns names

@@ -17,7 +17,7 @@ public class ContactDBHandler extends SQLiteOpenHelper{
     // Database Version
     private static final int DATABASE_VERSION = 1;
     // Database Name
-    private static final String DATABASE_NAME = "reactiveApp";
+    private static final String DATABASE_NAME = "reactiveAppContacts";
     // Contacts table name
     private static final String TABLE_CONTACTS = "contacts";
     // Shops Table Columns names
@@ -69,6 +69,24 @@ public class ContactDBHandler extends SQLiteOpenHelper{
         Contact contact = new Contact(Integer.parseInt(cursor.getString(0)),
                 cursor.getString(1), cursor.getString(2), cursor.getString(3));
         // return contact
+        return contact;
+    }
+
+    // Getting one contact by username
+    public Contact getContactByUsername(String username) {
+        String selectQuery = "SELECT * FROM " + TABLE_CONTACTS + " WHERE " + KEY_USERNAME + "='" +username.trim()+"'";
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        Contact contact = new Contact();
+
+        // looping through all rows and adding to list
+        if (cursor.moveToFirst()) {
+            contact.setId(Integer.parseInt(cursor.getString(0)));
+            contact.setUsername(cursor.getString(1));
+            contact.setUserImage(cursor.getString(2));
+            contact.setPublicKey(cursor.getString(3));
+        }
+
         return contact;
     }
 

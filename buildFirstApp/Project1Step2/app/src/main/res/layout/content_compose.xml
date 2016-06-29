@@ -17,7 +17,7 @@
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="To:"
-        android:id="@+id/msg_ttl"
+        android:id="@+id/to"
         android:layout_alignParentTop="true"
         android:layout_above="@+id/msg_subject"
         android:gravity="center_vertical" />
@@ -25,13 +25,13 @@
     <EditText
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/msg_sender"
+        android:id="@+id/msg_receiver"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentEnd="false"
         android:maxLines="1"
         android:background="@drawable/edittext_bg"
-        android:layout_toRightOf="@+id/msg_ttl"
+        android:layout_toRightOf="@+id/to"
         android:layout_alignParentStart="false"
         android:layout_marginLeft="20dp" />
 
@@ -39,7 +39,7 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:id="@+id/msg_subject"
-        android:layout_below="@+id/msg_sender"
+        android:layout_below="@+id/msg_receiver"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="false"
         android:layout_alignParentRight="true"

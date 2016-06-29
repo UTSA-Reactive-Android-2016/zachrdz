@@ -1,5 +1,6 @@
 package com.csandroid.myfirstapp;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -12,10 +13,17 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import com.csandroid.myfirstapp.db.ContactDBHandler;
+import com.csandroid.myfirstapp.models.Contact;
+
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ContactsActivity extends AppCompatActivity {
+
+    private ContactDBHandler db;
+    private RecyclerView recList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,15 +33,22 @@ public class ContactsActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        RecyclerView recList = (RecyclerView) findViewById(R.id.contacts_cards_list);
+        recList = (RecyclerView) findViewById(R.id.contacts_cards_list);
         recList.setHasFixedSize(true);
         LinearLayoutManager llm = new LinearLayoutManager(this);
         llm.setOrientation(LinearLayoutManager.VERTICAL);
         recList.setLayoutManager(llm);
 
-        ContactAdapter ca = new ContactAdapter(createList(30));
-        recList.setAdapter(ca);
+        boolean dbExists = this.doesDatabaseExist(this.getApplicationContext(), "reactiveAppContacts");
+        this.db = new  ContactDBHandler(this);
 
+        // Create 3 fake contacts when the db is initially created
+        if(!dbExists) {
+            this.createFakeContacts();
+        }
+
+        ContactAdapter ca = new ContactAdapter(createList());
+        recList.setAdapter(ca);
     }
 
     // Menu icons are inflated just as they were with actionbar
@@ -50,7 +65,7 @@ public class ContactsActivity extends AppCompatActivity {
 
         switch (id) {
             case R.id.action_add_contact:
-                Intent addContactIntent = new Intent(ContactsActivity.this, EditContactActivity.class);
+                Intent addContactIntent = new Intent(ContactsActivity.this, AddContactActivity.class);
                 startActivity(addContactIntent);
                 return true;
             case android.R.id.home:
@@ -63,19 +78,34 @@ public class ContactsActivity extends AppCompatActivity {
 
     }
 
-    private List<ContactInfo> createList(int size) {
+    @Override
+    public void onResume() {
+        super.onResume();  // Always call the superclass method first
 
-        List<ContactInfo> result = new ArrayList<ContactInfo>();
-        for (int i=1; i <= size; i++) {
-            ContactInfo ci = new ContactInfo();
-            ci.name = ContactInfo.NAME_PREFIX + i;
-            ci.surname = ContactInfo.SURNAME_PREFIX + i;
-            ci.email = ContactInfo.EMAIL_PREFIX + i + "@test.com";
+        // When the view is brought back into focus, reload contacts
+        // list to make sure user doesn't see stale data.
+        ContactAdapter ca = new ContactAdapter(createList());
+        recList.setAdapter(ca);
+        recList.invalidate();
+    }
 
-            result.add(ci);
+    private List<Contact> createList() {
+        List<Contact> contacts = this.db.getAllContacts();
 
-        }
+        return contacts;
+    }
 
-        return result;
+    private static boolean doesDatabaseExist(Context context, String dbName) {
+        File dbFile = context.getDatabasePath(dbName);
+        return dbFile.exists();
+    }
+
+    private void createFakeContacts(){
+        this.db.addContact(new Contact("johndoe", null,
+                "$3593JFIK$*F_8"));
+        this.db.addContact(new Contact("mikejones", null,
+                "%DT%$#DADsd$"));
+        this.db.addContact(new Contact("stacyp", null,
+                "45e$EF%%WQSsF"));
     }
 }

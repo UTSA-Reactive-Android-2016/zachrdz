@@ -37,6 +37,15 @@ public class ReadMessageActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent composeIntent = new Intent(ReadMessageActivity.this, ComposeActivity.class);
+                //Create the bundle
+                Bundle bundle = new Bundle();
+                MessageDBHandler db = new MessageDBHandler(ReadMessageActivity.this);
+                Message message = db.getMessage(ReadMessageActivity.this.messageId);
+                //Add your data to bundle
+                bundle.putString("reply_to_username", message.getSenderUsername());
+
+                //Add the bundle to the intent
+                composeIntent.putExtras(bundle);
                 startActivity(composeIntent);
             }
         });
@@ -45,6 +54,11 @@ public class ReadMessageActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent mainIntent = new Intent(ReadMessageActivity.this, MainActivity.class);
+                MessageDBHandler db = new MessageDBHandler(v.getContext());
+                Message msg = db.getMessage(ReadMessageActivity.this.messageId);
+                db.deleteMessage(msg);
+                Toast.makeText(v.getContext(), "Deleted message from: " + msg.getSenderUsername(),
+                        Toast.LENGTH_LONG).show();
                 startActivity(mainIntent);
             }
         });
