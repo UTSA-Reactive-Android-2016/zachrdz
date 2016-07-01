@@ -2,22 +2,17 @@ package com.csandroid.myfirstapp;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.csandroid.myfirstapp.db.ContactDBHandler;
-import com.csandroid.myfirstapp.db.MessageDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
-import com.csandroid.myfirstapp.models.Message;
 
 public class EditContactActivity extends AppCompatActivity {
 
@@ -29,33 +24,12 @@ public class EditContactActivity extends AppCompatActivity {
         setContentView(R.layout.activity_edit_contact);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        if(null != getSupportActionBar()){
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
 
-        ImageButton deleteBtn = (ImageButton) findViewById(R.id.imageButton2);
-
-
-        deleteBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent contactsIntent = new Intent(EditContactActivity.this, ContactsActivity.class);
-                ContactDBHandler db = new ContactDBHandler(v.getContext());
-                Contact contact = db.getContact(EditContactActivity.this.contactId);
-                db.deleteContact(contact);
-                Toast.makeText(v.getContext(), "Deleted contact: " + contact.getUsername(),
-                        Toast.LENGTH_LONG).show();
-                startActivity(contactsIntent);
-            }
-        });
-
-        //Get the bundle
-        Bundle bundle = getIntent().getExtras();
-
-        //Extract the data…
-        String contactId = bundle.getString("contact_id");
-        this.contactId = Integer.parseInt(contactId);
-
+        this.initOnClickListeners();
         this.populateFields();
-
     }
 
     @Override
@@ -71,6 +45,15 @@ public class EditContactActivity extends AppCompatActivity {
     }
 
     public void populateFields(){
+        //Get the bundle
+        Bundle bundle = getIntent().getExtras();
+
+        if(null != bundle){
+            //Extract the data…
+            String contactId = bundle.getString("contact_id");
+            this.contactId = Integer.parseInt(contactId);
+        }
+
         TextView username = (TextView)findViewById(R.id.username);
         ImageView userImage = (ImageView)findViewById(R.id.userImage);
         TextView publicKey = (TextView)findViewById(R.id.publicKey);
@@ -79,7 +62,29 @@ public class EditContactActivity extends AppCompatActivity {
 
         Contact contact = db.getContact(this.contactId);
 
-        username.setText(contact.getUsername());
-        publicKey.setText(contact.getPublicKey());
+        if(null != username && null != publicKey) {
+            username.setText(contact.getUsername());
+            publicKey.setText(contact.getPublicKey());
+        }
+    }
+
+    public void initOnClickListeners(){
+        ImageButton deleteBtn = (ImageButton) findViewById(R.id.imageButton2);
+
+        if(null != deleteBtn) {
+            deleteBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent contactsIntent = new Intent(EditContactActivity.this, ContactsActivity.class);
+                    ContactDBHandler db = new ContactDBHandler(v.getContext());
+                    Contact contact = db.getContact(EditContactActivity.this.contactId);
+                    db.deleteContact(contact);
+                    Toast.makeText(v.getContext(), "Deleted contact: " + contact.getUsername(),
+                            Toast.LENGTH_LONG).show();
+                    contactsIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(contactsIntent);
+                }
+            });
+        }
     }
 }

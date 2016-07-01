@@ -7,7 +7,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -15,7 +14,6 @@ import com.csandroid.myfirstapp.db.MessageDBHandler;
 import com.csandroid.myfirstapp.models.Message;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -29,26 +27,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.main_toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayShowTitleEnabled(false);
-
-        //Recycler view stuff
-        recList = (RecyclerView) findViewById(R.id.main_cards_list);
-        recList.setHasFixedSize(true);
-        LinearLayoutManager llm = new LinearLayoutManager(this);
-        llm.setOrientation(LinearLayoutManager.VERTICAL);
-        recList.setLayoutManager(llm);
-
-        boolean dbExists = this.doesDatabaseExist(this.getApplicationContext(), "reactiveAppMessages");
-
-        this.db = new MessageDBHandler(this);
-
-        // Create 3 fake messages when the db is initially created
-        if(!dbExists) {
-            this.createFakeMessages();
+        if(null != getSupportActionBar()) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
-
-        MessageAdapter ma = new MessageAdapter(createList());
-        recList.setAdapter(ma);
+        this.setupRecyclerView();
     }
 
     // Menu icons are inflated just as they were with actionbar
@@ -66,14 +48,17 @@ public class MainActivity extends AppCompatActivity {
         switch(id){
             case R.id.action_settings :
                 Intent settingsIntent = new Intent(MainActivity.this, SettingsActivity.class);
+                settingsIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(settingsIntent);
                 return true;
             case R.id.action_contacts :
                 Intent contactsIntent = new Intent(MainActivity.this, ContactsActivity.class);
+                contactsIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(contactsIntent);
                 return true;
             case R.id.action_compose :
                 Intent composeIntent = new Intent(MainActivity.this, ComposeActivity.class);
+                composeIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(composeIntent);
                 return true;
             default :
@@ -92,13 +77,34 @@ public class MainActivity extends AppCompatActivity {
         recList.invalidate();
     }
 
-    private List<Message> createList() {
-        List<Message> messages = this.db.getAllMessages();
+    private void setupRecyclerView() {
+        //Recycler view stuff
+        recList = (RecyclerView) findViewById(R.id.main_cards_list);
+        if(null != recList) {
+            recList.setHasFixedSize(true);
+            LinearLayoutManager llm = new LinearLayoutManager(this);
+            llm.setOrientation(LinearLayoutManager.VERTICAL);
+            recList.setLayoutManager(llm);
 
-        return messages;
+            boolean dbExists = this.doesDatabaseExist(this.getApplicationContext(), "reactiveAppMessages");
+
+            this.db = new MessageDBHandler(this);
+
+            // Create 3 fake messages when the db is initially created
+            if (!dbExists) {
+                this.createFakeMessages();
+            }
+
+            MessageAdapter ma = new MessageAdapter(createList());
+            recList.setAdapter(ma);
+        }
     }
 
-    private static boolean doesDatabaseExist(Context context, String dbName) {
+    private List<Message> createList() {
+        return this.db.getAllMessages();
+    }
+
+    private boolean doesDatabaseExist(Context context, String dbName) {
         File dbFile = context.getDatabasePath(dbName);
         return dbFile.exists();
     }

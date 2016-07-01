@@ -1,8 +1,5 @@
 package com.csandroid.myfirstapp.models;
 
-/**
- * Created by Zach on 6/29/2016.
- */
 public class Contact {
     private int id;
     private String username;

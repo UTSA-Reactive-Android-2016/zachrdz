@@ -4,21 +4,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.csandroid.myfirstapp.db.MessageDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
-import com.csandroid.myfirstapp.models.Message;
 
 import java.util.List;
 
-/**
- * Created by Administrator on 6/23/2016.
- */
 public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactViewHolder>{
 
     private List<Contact> contactList;
@@ -37,7 +32,7 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
     public void onBindViewHolder(ContactViewHolder contactViewHolder, int i) {
         final Contact ci = contactList.get(i);
         contactViewHolder.vUsername.setText(ci.getUsername());
-        contactViewHolder.vUserImage.setText(ci.getUserImage());
+        //contactViewHolder.vUserImage.setBackground(ci.getUserImage());
         contactViewHolder.vPublicKey.setText(ci.getPublicKey());
 
         contactViewHolder.itemView.findViewById(R.id.editContactBtn).setOnClickListener(new View.OnClickListener() {
@@ -54,7 +49,7 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
 
                 //Add the bundle to the intent
                 intent.putExtras(bundle);
-
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 context.startActivity(intent);
             }
         });
@@ -72,6 +67,7 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
 
                 //Add the bundle to the intent
                 intent.putExtras(bundle);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 context.startActivity(intent);
             }
         });
@@ -89,14 +85,14 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
     public static class ContactViewHolder extends RecyclerView.ViewHolder {
 
         protected TextView vUsername;
-        protected TextView vUserImage;
+        protected ImageView vUserImage;
         protected TextView vPublicKey;
 
         public ContactViewHolder(View v) {
             super(v);
 
             vUsername = (TextView) v.findViewById(R.id.username);
-            vUserImage = (TextView) v.findViewById(R.id.userImage);
+            vUserImage = (ImageView) v.findViewById(R.id.userImage);
             vPublicKey = (TextView) v.findViewById(R.id.publicKey);
         }
     }

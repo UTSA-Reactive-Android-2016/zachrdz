@@ -10,9 +10,6 @@ import com.csandroid.myfirstapp.models.Message;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Zach on 6/29/2016.
- */
 public class MessageDBHandler extends SQLiteOpenHelper{
     // Database Version
     private static final int DATABASE_VERSION = 1;
@@ -66,18 +63,23 @@ public class MessageDBHandler extends SQLiteOpenHelper{
         Cursor cursor = db.query(TABLE_MESSAGES, new String[] { KEY_ID,
                         KEY_SENDER_USERNAME, KEY_SUBJECT, KEY_MESSAGE_BODY, KEY_TTL },
                         KEY_ID + "=?", new String[] { String.valueOf(id) }, null, null, null, null);
-        if (cursor != null)
+
+        Message message = new Message();
+        if (cursor != null) {
             cursor.moveToFirst();
-        Message message = new Message(Integer.parseInt(cursor.getString(0)),
-                cursor.getString(1), cursor.getString(2), cursor.getString(3),
-                Integer.parseInt(cursor.getString(4)));
+            message = new Message(Integer.parseInt(cursor.getString(0)),
+                    cursor.getString(1), cursor.getString(2), cursor.getString(3),
+                    Integer.parseInt(cursor.getString(4)));
+
+            cursor.close();
+        }
         // return message
         return message;
     }
 
     // Getting All Messages
     public List<Message> getAllMessages() {
-        List<Message> messageList = new ArrayList<Message>();
+        List<Message> messageList = new ArrayList<>();
         // Select All Query
         String selectQuery = "SELECT * FROM " + TABLE_MESSAGES;
         SQLiteDatabase db = this.getWritableDatabase();
@@ -95,6 +97,7 @@ public class MessageDBHandler extends SQLiteOpenHelper{
                 messageList.add(message);
             } while (cursor.moveToNext());
         }
+        cursor.close();
         // return message list
         return messageList;
     }

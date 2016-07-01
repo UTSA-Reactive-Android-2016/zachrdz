@@ -3,21 +3,17 @@ package com.csandroid.myfirstapp;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ContactsActivity extends AppCompatActivity {
@@ -31,24 +27,11 @@ public class ContactsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_contacts);
         Toolbar toolbar = (Toolbar) findViewById(R.id.contacts_toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-        recList = (RecyclerView) findViewById(R.id.contacts_cards_list);
-        recList.setHasFixedSize(true);
-        LinearLayoutManager llm = new LinearLayoutManager(this);
-        llm.setOrientation(LinearLayoutManager.VERTICAL);
-        recList.setLayoutManager(llm);
-
-        boolean dbExists = this.doesDatabaseExist(this.getApplicationContext(), "reactiveAppContacts");
-        this.db = new  ContactDBHandler(this);
-
-        // Create 3 fake contacts when the db is initially created
-        if(!dbExists) {
-            this.createFakeContacts();
+        if(null != getSupportActionBar()){
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        ContactAdapter ca = new ContactAdapter(createList());
-        recList.setAdapter(ca);
+        this.setupRecyclerView();
     }
 
     // Menu icons are inflated just as they were with actionbar
@@ -66,6 +49,7 @@ public class ContactsActivity extends AppCompatActivity {
         switch (id) {
             case R.id.action_add_contact:
                 Intent addContactIntent = new Intent(ContactsActivity.this, AddContactActivity.class);
+                addContactIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 startActivity(addContactIntent);
                 return true;
             case android.R.id.home:
@@ -89,13 +73,32 @@ public class ContactsActivity extends AppCompatActivity {
         recList.invalidate();
     }
 
-    private List<Contact> createList() {
-        List<Contact> contacts = this.db.getAllContacts();
+    private void setupRecyclerView(){
+        recList = (RecyclerView) findViewById(R.id.contacts_cards_list);
+        if(null != recList){
+            recList.setHasFixedSize(true);
+            LinearLayoutManager llm = new LinearLayoutManager(this);
+            llm.setOrientation(LinearLayoutManager.VERTICAL);
+            recList.setLayoutManager(llm);
 
-        return contacts;
+            boolean dbExists = this.doesDatabaseExist(this.getApplicationContext(), "reactiveAppContacts");
+            this.db = new  ContactDBHandler(this);
+
+            // Create 3 fake contacts when the db is initially created
+            if(!dbExists) {
+                this.createFakeContacts();
+            }
+
+            ContactAdapter ca = new ContactAdapter(createList());
+            recList.setAdapter(ca);
+        }
     }
 
-    private static boolean doesDatabaseExist(Context context, String dbName) {
+    private List<Contact> createList() {
+        return this.db.getAllContacts();
+    }
+
+    private boolean doesDatabaseExist(Context context, String dbName) {
         File dbFile = context.getDatabasePath(dbName);
         return dbFile.exists();
     }

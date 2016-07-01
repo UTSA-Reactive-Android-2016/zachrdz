@@ -32,6 +32,7 @@
         android:maxLines="1"
         android:background="@drawable/edittext_bg"
         android:layout_toRightOf="@+id/to"
+        android:singleLine="true"
         android:layout_alignParentStart="false"
         android:layout_marginLeft="20dp" />
 
@@ -46,6 +47,7 @@
         android:layout_alignParentEnd="false"
         android:background="@drawable/edittext_bg"
         android:hint="Subject"
+        android:singleLine="true"
         android:layout_marginTop="20dp" />
 
     <EditText

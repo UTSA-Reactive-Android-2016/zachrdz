@@ -2,8 +2,6 @@ package com.csandroid.myfirstapp;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
@@ -13,7 +11,6 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 
@@ -25,38 +22,10 @@ public class AddContactActivity extends AppCompatActivity {
         setContentView(R.layout.activity_add_contact);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-        final EditText username = (EditText)findViewById(R.id.username);
-        final EditText publicKey = (EditText)findViewById(R.id.publicKey);
-
-        Button saveBtn = (Button) findViewById(R.id.button2);
-        ImageButton deleteBtn = (ImageButton) findViewById(R.id.imageButton2);
-
-
-        saveBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent contactsIntent = new Intent(AddContactActivity.this, ContactsActivity.class);
-                ContactDBHandler db = new ContactDBHandler(AddContactActivity.this);
-                Contact contact = new Contact();
-                contact.setUsername(username.getText().toString());
-                contact.setPublicKey(publicKey.getText().toString());
-                db.addContact(contact);
-                Toast.makeText(v.getContext(), "Added Contact: " + contact.getUsername(),
-                        Toast.LENGTH_LONG).show();
-                startActivity(contactsIntent);
-            }
-        });
-
-        deleteBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent contactsIntent = new Intent(AddContactActivity.this, ContactsActivity.class);
-                startActivity(contactsIntent);
-            }
-        });
-
+        if(null != getSupportActionBar()){
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+        this.initOnClickListeners();
     }
 
     @Override
@@ -68,6 +37,42 @@ public class AddContactActivity extends AppCompatActivity {
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
+        }
+    }
+
+    public void initOnClickListeners(){
+        final EditText username = (EditText)findViewById(R.id.username);
+        final EditText publicKey = (EditText)findViewById(R.id.publicKey);
+
+        Button saveBtn = (Button) findViewById(R.id.button2);
+        ImageButton deleteBtn = (ImageButton) findViewById(R.id.imageButton2);
+
+        if(null != saveBtn && null != username && null != publicKey) {
+            saveBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent contactsIntent = new Intent(AddContactActivity.this, ContactsActivity.class);
+                    ContactDBHandler db = new ContactDBHandler(AddContactActivity.this);
+                    Contact contact = new Contact();
+                    contact.setUsername(username.getText().toString());
+                    contact.setPublicKey(publicKey.getText().toString());
+                    db.addContact(contact);
+                    Toast.makeText(v.getContext(), "Added Contact: " + contact.getUsername(),
+                            Toast.LENGTH_LONG).show();
+                    contactsIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(contactsIntent);
+                }
+            });
+        }
+        if(null != deleteBtn) {
+            deleteBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent contactsIntent = new Intent(AddContactActivity.this, ContactsActivity.class);
+                    contactsIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(contactsIntent);
+                }
+            });
         }
     }
 

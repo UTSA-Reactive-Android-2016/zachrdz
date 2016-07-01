@@ -27,6 +27,7 @@
             android:layout_alignParentStart="false"
             android:hint="Name"
             android:background="@drawable/edittext_bg"
+            android:singleLine="true"
             android:layout_toLeftOf="@+id/search_button" />
 
         <ImageButton
@@ -62,6 +63,7 @@
             android:layout_alignParentEnd="false"
             android:layout_marginTop="20dp"
             android:hint="Public Key"
+            android:singleLine="true"
             android:background="@drawable/edittext_bg"
             android:layout_marginBottom="70dp" />
 

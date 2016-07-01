@@ -1,8 +1,5 @@
 package com.csandroid.myfirstapp.models;
 
-/**
- * Created by Zach on 6/29/2016.
- */
 public class Message {
     private int id;
     private String senderUsername;

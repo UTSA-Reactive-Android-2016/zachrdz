@@ -10,9 +10,6 @@ import com.csandroid.myfirstapp.models.Contact;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Zach on 6/29/2016.
- */
 public class ContactDBHandler extends SQLiteOpenHelper{
     // Database Version
     private static final int DATABASE_VERSION = 1;
@@ -66,8 +63,16 @@ public class ContactDBHandler extends SQLiteOpenHelper{
                 KEY_ID + "=?", new String[] { String.valueOf(id) }, null, null, null);
         if (cursor != null)
             cursor.moveToFirst();
-        Contact contact = new Contact(Integer.parseInt(cursor.getString(0)),
-                cursor.getString(1), cursor.getString(2), cursor.getString(3));
+
+        Contact contact = new Contact();
+
+        if(null != cursor) {
+            contact = new Contact(Integer.parseInt(cursor.getString(0)),
+                    cursor.getString(1), cursor.getString(2), cursor.getString(3));
+
+            cursor.close();
+        }
+
         // return contact
         return contact;
     }
@@ -87,6 +92,7 @@ public class ContactDBHandler extends SQLiteOpenHelper{
             contact.setPublicKey(cursor.getString(3));
         }
 
+        cursor.close();
         return contact;
     }
 
@@ -110,6 +116,8 @@ public class ContactDBHandler extends SQLiteOpenHelper{
                 contactList.add(contact);
             } while (cursor.moveToNext());
         }
+
+        cursor.close();
         // return contact list
         return contactList;
     }
