@@ -1,6 +1,5 @@
 package com.csandroid.myfirstapp;
 
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -13,12 +12,10 @@ import android.view.MenuItem;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 
-import java.io.File;
 import java.util.List;
 
 public class ContactsActivity extends AppCompatActivity {
 
-    private ContactDBHandler db;
     private RecyclerView recList;
 
     @Override
@@ -73,6 +70,11 @@ public class ContactsActivity extends AppCompatActivity {
         recList.invalidate();
     }
 
+    private List<Contact> createList() {
+        ContactDBHandler db = new ContactDBHandler(this);
+        return db.getAllContacts();
+    }
+
     private void setupRecyclerView(){
         recList = (RecyclerView) findViewById(R.id.contacts_cards_list);
         if(null != recList){
@@ -81,34 +83,8 @@ public class ContactsActivity extends AppCompatActivity {
             llm.setOrientation(LinearLayoutManager.VERTICAL);
             recList.setLayoutManager(llm);
 
-            boolean dbExists = this.doesDatabaseExist(this.getApplicationContext(), "reactiveAppContacts");
-            this.db = new  ContactDBHandler(this);
-
-            // Create 3 fake contacts when the db is initially created
-            if(!dbExists) {
-                this.createFakeContacts();
-            }
-
             ContactAdapter ca = new ContactAdapter(createList());
             recList.setAdapter(ca);
         }
-    }
-
-    private List<Contact> createList() {
-        return this.db.getAllContacts();
-    }
-
-    private boolean doesDatabaseExist(Context context, String dbName) {
-        File dbFile = context.getDatabasePath(dbName);
-        return dbFile.exists();
-    }
-
-    private void createFakeContacts(){
-        this.db.addContact(new Contact("johndoe", null,
-                "$3593JFIK$*F_8"));
-        this.db.addContact(new Contact("mikejones", null,
-                "%DT%$#DADsd$"));
-        this.db.addContact(new Contact("stacyp", null,
-                "45e$EF%%WQSsF"));
     }
 }

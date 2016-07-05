@@ -33,7 +33,6 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
         final Contact ci = contactList.get(i);
         contactViewHolder.vUsername.setText(ci.getUsername());
         //contactViewHolder.vUserImage.setBackground(ci.getUserImage());
-        contactViewHolder.vPublicKey.setText(ci.getPublicKey());
 
         contactViewHolder.itemView.findViewById(R.id.editContactBtn).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -86,14 +85,12 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
 
         protected TextView vUsername;
         protected ImageView vUserImage;
-        protected TextView vPublicKey;
 
         public ContactViewHolder(View v) {
             super(v);
 
             vUsername = (TextView) v.findViewById(R.id.username);
             vUserImage = (ImageView) v.findViewById(R.id.userImage);
-            vPublicKey = (TextView) v.findViewById(R.id.publicKey);
         }
     }
 

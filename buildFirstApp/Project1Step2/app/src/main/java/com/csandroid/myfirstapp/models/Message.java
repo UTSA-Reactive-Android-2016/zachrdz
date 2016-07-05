@@ -5,17 +5,19 @@ public class Message {
     private String senderUsername;
     private String subject;
     private String messageBody;
+    private int createdAt;
     private int TTL;
 
     public Message(){
 
     }
 
-    public Message(int id, String username, String subject, String body, int TTL){
+    public Message(int id, String username, String subject, String body, int createdAt, int TTL){
         this.id = id;
         this.senderUsername = username;
         this.subject = subject;
         this.messageBody = body;
+        this.createdAt = createdAt;
         this.TTL = TTL;
     }
 
@@ -64,5 +66,13 @@ public class Message {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public int getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(int createdAt) {
+        this.createdAt = createdAt;
     }
 }

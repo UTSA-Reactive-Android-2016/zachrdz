@@ -47,13 +47,5 @@
             android:layout_marginTop="8dp"
             android:layout_marginRight="20dp" />
 
-        <ProgressBar
-            android:id="@+id/ttlBar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginTop="5dp"
-            android:layout_centerHorizontal="true"
-            android:progressDrawable="@drawable/circular_progress_bar" />
     </RelativeLayout>
 </android.support.v7.widget.CardView>

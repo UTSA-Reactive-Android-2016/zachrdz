@@ -2,6 +2,7 @@ package com.csandroid.myfirstapp;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
@@ -108,10 +109,54 @@ public class ReadMessageActivity extends AppCompatActivity {
             msgSubject.setText(message.getSubject());
         }
         if(null != msgTTL) {
-            msgTTL.setText(String.valueOf(message.getTTL()));
+            this.setupTTLTimer(msgTTL);
         }
         if(null != msgBody) {
             msgBody.setText(message.getMessageBody());
+        }
+    }
+
+    private void setupTTLTimer(final TextView msgTTLField){
+        final MessageDBHandler db = new MessageDBHandler(this);
+        final Message msg = db.getMessage(this.messageId);
+
+        // Get the current time
+        final int currTime = (int) (System.currentTimeMillis() / 1000L);
+        final int createdAt = msg.getCreatedAt();
+        // Determine remaining ttl
+        final int ttl = msg.getTTL();
+
+        // Check if message should be deleted or shown
+        boolean stillAlive = (createdAt + ttl) > currTime;
+
+        if(stillAlive) {
+            final int ttlInMillis = ((createdAt + ttl) - currTime) * 1000;
+
+            new CountDownTimer(ttlInMillis, 1000) {
+                public void onTick(long millisUntilFinished) {
+                    msgTTLField.setText("TTL: " + millisUntilFinished / 1000 + " sec");
+                }
+
+                public void onFinish() {
+                    // Message has expired, delete it locally and send user back to list
+                    Intent mainIntent = new Intent(ReadMessageActivity.this, MainActivity.class);
+                    db.deleteMessage(msg);
+                    mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    Toast.makeText(ReadMessageActivity.this.getApplicationContext(),
+                            "Message Expired!",
+                            Toast.LENGTH_LONG).show();
+                    startActivity(mainIntent);
+                }
+            }.start();
+        } else{
+            // Message has expired, delete it locally and send user back to list
+            Intent mainIntent = new Intent(ReadMessageActivity.this, MainActivity.class);
+            db.deleteMessage(msg);
+            mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            Toast.makeText(ReadMessageActivity.this.getApplicationContext(),
+                    "Message Expired!",
+                    Toast.LENGTH_LONG).show();
+            startActivity(mainIntent);
         }
     }
 

@@ -12,17 +12,18 @@ import java.util.List;
 
 public class MessageDBHandler extends SQLiteOpenHelper{
     // Database Version
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 3;
     // Database Name
     private static final String DATABASE_NAME = "reactiveAppMessages";
-    // Contacts table name
+    // Table name
     private static final String TABLE_MESSAGES = "messages";
-    // Shops Table Columns names
+    // Table Columns names
     private static final String KEY_ID = "id";
     private static final String KEY_SENDER_USERNAME = "sender_username";
     private static final String KEY_SUBJECT = "subject";
     private static final String KEY_MESSAGE_BODY = "message_body";
     private static final String KEY_TTL = "ttl";
+    private static final String KEY_CREATED_AT = "created_at";
 
     public MessageDBHandler(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -32,7 +33,8 @@ public class MessageDBHandler extends SQLiteOpenHelper{
     public void onCreate(SQLiteDatabase db) {
         String CREATE_MESSAGES_TABLE = "CREATE TABLE " + TABLE_MESSAGES + "("
                 + KEY_ID + " INTEGER PRIMARY KEY," + KEY_SENDER_USERNAME + " TEXT,"
-                + KEY_SUBJECT + " TEXT," + KEY_MESSAGE_BODY + " TEXT," + KEY_TTL + " INTEGER" + ")";
+                + KEY_SUBJECT + " TEXT," + KEY_MESSAGE_BODY + " TEXT,"
+                + KEY_CREATED_AT + " INTEGER," + KEY_TTL + " INTEGER" + ")";
         db.execSQL(CREATE_MESSAGES_TABLE);
     }
     @Override
@@ -50,6 +52,7 @@ public class MessageDBHandler extends SQLiteOpenHelper{
         values.put(KEY_SENDER_USERNAME, message.getSenderUsername());
         values.put(KEY_SUBJECT, message.getSubject());
         values.put(KEY_MESSAGE_BODY, message.getMessageBody());
+        values.put(KEY_CREATED_AT, (int) (System.currentTimeMillis() / 1000L));
         values.put(KEY_TTL, message.getTTL());
 
         // Inserting Row
@@ -61,7 +64,7 @@ public class MessageDBHandler extends SQLiteOpenHelper{
     public Message getMessage(int id) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(TABLE_MESSAGES, new String[] { KEY_ID,
-                        KEY_SENDER_USERNAME, KEY_SUBJECT, KEY_MESSAGE_BODY, KEY_TTL },
+                        KEY_SENDER_USERNAME, KEY_SUBJECT, KEY_MESSAGE_BODY, KEY_CREATED_AT, KEY_TTL },
                         KEY_ID + "=?", new String[] { String.valueOf(id) }, null, null, null, null);
 
         Message message = new Message();
@@ -69,10 +72,14 @@ public class MessageDBHandler extends SQLiteOpenHelper{
             cursor.moveToFirst();
             message = new Message(Integer.parseInt(cursor.getString(0)),
                     cursor.getString(1), cursor.getString(2), cursor.getString(3),
-                    Integer.parseInt(cursor.getString(4)));
+                    Integer.parseInt(cursor.getString(4)),
+                    Integer.parseInt(cursor.getString(5)));
 
             cursor.close();
         }
+
+        db.close(); // Closing database connection
+
         // return message
         return message;
     }
@@ -92,12 +99,15 @@ public class MessageDBHandler extends SQLiteOpenHelper{
                 message.setSenderUsername(cursor.getString(1));
                 message.setSubject(cursor.getString(2));
                 message.setMessageBody(cursor.getString(3));
-                message.setTTL(Integer.parseInt(cursor.getString(4)));
+                message.setCreatedAt(Integer.parseInt(cursor.getString(4)));
+                message.setTTL(Integer.parseInt(cursor.getString(5)));
                 // Adding message to list
                 messageList.add(message);
             } while (cursor.moveToNext());
         }
         cursor.close();
+        db.close(); // Closing database connection
+
         // return message list
         return messageList;
     }
@@ -107,9 +117,13 @@ public class MessageDBHandler extends SQLiteOpenHelper{
         String countQuery = "SELECT * FROM " + TABLE_MESSAGES;
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery(countQuery, null);
+        int count = cursor.getCount();
         cursor.close();
+
+        db.close(); // Closing database connection
+
         // return count
-        return cursor.getCount();
+        return count;
     }
 
     // Updating a message
@@ -122,8 +136,12 @@ public class MessageDBHandler extends SQLiteOpenHelper{
         values.put(KEY_TTL, message.getTTL());
 
         // updating row
-        return db.update(TABLE_MESSAGES, values, KEY_ID + " = ?",
+        int result = db.update(TABLE_MESSAGES, values, KEY_ID + " = ?",
                 new String[]{String.valueOf(message.getId())});
+
+        db.close(); // Closing database connection
+
+        return result;
     }
 
     // Deleting a message

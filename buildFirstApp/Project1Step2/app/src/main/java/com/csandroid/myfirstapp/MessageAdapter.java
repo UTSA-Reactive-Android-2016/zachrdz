@@ -6,12 +6,15 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.csandroid.myfirstapp.db.MessageDBHandler;
 import com.csandroid.myfirstapp.models.Message;
 
 import java.util.List;
@@ -31,7 +34,7 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
     }
 
     @Override
-    public void onBindViewHolder(MessageViewHolder messageViewHolder, int i) {
+    public void onBindViewHolder(final MessageViewHolder messageViewHolder, int i) {
         final Message ci = messageList.get(i);
 
         final MessageViewHolder mvh = messageViewHolder;
@@ -40,20 +43,33 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
         messageViewHolder.vSubject.setText(ci.getSubject());
         messageViewHolder.vTTL.setText(String.valueOf(ci.getTTL()));
 
-        final int ttlInMillis = ci.getTTL() * 1000;
+        // Get the current time
+        final int currTime = (int) (System.currentTimeMillis() / 1000L);
+        final int createdAt = ci.getCreatedAt();
+        // Determine remaining ttl
+        final int ttl = ci.getTTL();
 
-        new CountDownTimer(ttlInMillis, 1000) {
+        // Check if message should be deleted or shown
+        boolean stillAlive = (createdAt + ttl) > currTime;
 
-            public void onTick(long millisUntilFinished) {
-                mvh.vTTL.setText("TTL: " + millisUntilFinished / 1000 + " sec");
-                mvh.vTTLBar.setProgress((ttlInMillis * 1000));
-            }
+        if(stillAlive) {
+            final int ttlInMillis = ((createdAt + ttl) - currTime) * 1000;
 
-            public void onFinish() {
-                mvh.vTTL.setText("DELETED");
-                mvh.vSender.setBackgroundResource(R.color.softred);
-            }
-        }.start();
+            new CountDownTimer(ttlInMillis, 1000) {
+                public void onTick(long millisUntilFinished) {
+                    mvh.vTTL.setText("TTL: " + millisUntilFinished / 1000 + " sec");
+                }
+
+                public void onFinish() {
+                    // Delete message
+                    mvh.vTTL.setText("DELETED");
+                    mvh.vSender.setBackgroundResource(R.color.softred);
+                }
+            }.start();
+        } else{
+            mvh.vTTL.setText("DELETED");
+            mvh.vSender.setBackgroundResource(R.color.softred);
+        }
 
         messageViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
 
@@ -91,7 +107,6 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
         protected TextView vSender;
         protected TextView vSubject;
         protected TextView vTTL;
-        protected ProgressBar vTTLBar;
 
         public MessageViewHolder(View v) {
             super(v);
@@ -99,7 +114,6 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
             vSender = (TextView) v.findViewById(R.id.sender);
             vSubject = (TextView) v.findViewById(R.id.subject);
             vTTL = (TextView) v.findViewById(R.id.ttl);
-            vTTLBar = (ProgressBar) v.findViewById(R.id.ttlBar);
         }
 
     }

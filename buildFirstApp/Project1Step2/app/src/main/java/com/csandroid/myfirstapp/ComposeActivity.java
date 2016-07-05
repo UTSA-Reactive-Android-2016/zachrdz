@@ -6,15 +6,21 @@ import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
+import com.csandroid.myfirstapp.models.LocalKeyPair;
+import com.csandroid.myfirstapp.utils.EncryptHelper;
+
+import java.security.PublicKey;
 
 public class ComposeActivity extends AppCompatActivity {
 
@@ -64,7 +70,7 @@ public class ComposeActivity extends AppCompatActivity {
     }
 
     public void initOnClickListeners(){
-        EditText toInput = (EditText) findViewById(R.id.msg_receiver);
+        final EditText toInput = (EditText) findViewById(R.id.msg_receiver);
         Button sendBtn = (Button) findViewById(R.id.button);
         ImageButton deleteBtn = (ImageButton) findViewById(R.id.imageButton4);
         ImageButton ttlBtn = (ImageButton) findViewById(R.id.imageButton5);
@@ -84,11 +90,41 @@ public class ComposeActivity extends AppCompatActivity {
             sendBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Intent composeIntent = new Intent(ComposeActivity.this, MainActivity.class);
-                    Toast.makeText(v.getContext(), "Encrypted Msg: " + composedMsg.getText().toString(),
-                            Toast.LENGTH_LONG).show();
-                    composeIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    startActivity(composeIntent);
+
+                    ContactDBHandler cdb = new ContactDBHandler(v.getContext());
+                    Contact contact = cdb.getContactByUsername(toInput.getText().toString());
+                    String message = composedMsg.getText().toString();
+
+                    // A receiver is specified and message exists!
+                    // Encrypt this message with their public key.
+                    if(message.length() > 0 && null != contact &&
+                            null != contact.getPublicKey() && contact.getPublicKey().length() > 0){
+                        Intent composeIntent = new Intent(ComposeActivity.this, MainActivity.class);
+                        String publicKeyString = contact.getPublicKey();
+                        Log.d("Public Key: ", publicKeyString);
+
+                        EncryptHelper encryptHelper = new EncryptHelper();
+                        PublicKey publicKey = encryptHelper.getPublicKeyFromString(publicKeyString);
+                        String encryptedMessage = encryptHelper.encryptTextWithPublic(message, publicKey);
+
+                        Toast.makeText(v.getContext(), "Encrypted Msg: " + encryptedMessage,
+                                Toast.LENGTH_LONG).show();
+
+                        composeIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        startActivity(composeIntent);
+                    } else if(message.length() > 0){
+                        // Default message if not encrypted (i.e. non-existing contact specified)
+                        String toastTitle = "Error: ";
+                        String errMsg = "No valid recipient specified!";
+                        Toast.makeText(v.getContext(), toastTitle + errMsg,
+                                Toast.LENGTH_LONG).show();
+                    } else{
+                        // Default message if text not supplied
+                        String toastTitle = "Error: ";
+                        String errMsg = "You didn't type a message to send!";
+                        Toast.makeText(v.getContext(), toastTitle + errMsg,
+                                Toast.LENGTH_LONG).show();
+                    }
                 }
             });
         }

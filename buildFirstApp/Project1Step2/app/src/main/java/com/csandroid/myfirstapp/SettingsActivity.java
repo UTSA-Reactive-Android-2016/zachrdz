@@ -3,7 +3,13 @@ package com.csandroid.myfirstapp;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.MenuItem;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
+import com.csandroid.myfirstapp.models.LocalKeyPair;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -17,6 +23,8 @@ public class SettingsActivity extends AppCompatActivity {
         if(null != getSupportActionBar()) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
+
+        this.populateFields();
     }
 
     @Override
@@ -28,6 +36,19 @@ public class SettingsActivity extends AppCompatActivity {
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
+        }
+    }
+
+    public void populateFields(){
+        TextView userPublicKey = (TextView)findViewById(R.id.userPublicKey);
+        TextView userPrivateKey = (TextView)findViewById(R.id.userPrivateKey);
+
+        LocalKeyPairDBHandler db = new LocalKeyPairDBHandler(this);
+        LocalKeyPair kp = db.getKeyPair();
+
+        if(null != userPublicKey && null != userPrivateKey) {
+            userPublicKey.setText(kp.getPublicKey());
+            userPrivateKey.setText(kp.getPrivateKey());
         }
     }
 }

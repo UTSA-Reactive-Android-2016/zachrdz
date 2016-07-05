@@ -1,61 +1,40 @@
 package com.csandroid.myfirstapp.utils;
 
 import android.util.Log;
-import android.view.View;
-import android.widget.EditText;
-
-import com.csandroid.myfirstapp.R;
-
-import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Base64;
-import android.util.Log;
-import android.view.View;
-import android.widget.EditText;
-import android.widget.TextView;
 
-import java.io.IOException;
-import java.io.StringWriter;
+import org.spongycastle.jce.provider.BouncyCastleProvider;
+
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.Key;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAKeyGenParameterSpec;
+import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
-/**
- * Created by zachary.rodriguez on 6/30/2016.
- */
 public class EncryptHelper {
 
     private static String DEBUG = "EncryptHelper";
-    private SecureRandom random = new SecureRandom();
+    private int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE;
 
-    public SecretKey generateKey() {
-        SecretKey AESKey = null;
-        try {
-            KeyGenerator aesGenerator = KeyGenerator.getInstance("AES", "SC");
-            aesGenerator.init(256, random);
-            AESKey = aesGenerator.generateKey();
-        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
-            e.printStackTrace();
-        }
-
-        return AESKey;
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+        Security.insertProviderAt(new org.spongycastle.jce.provider.BouncyCastleProvider(),1);
     }
 
     public KeyPair generateKeyPair(){
@@ -69,77 +48,109 @@ public class EncryptHelper {
             generator.initialize(spec, random);
 
             myKeyPair = generator.generateKeyPair();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchProviderException e) {
-            e.printStackTrace();
-        } catch (InvalidAlgorithmParameterException e) {
+        } catch (NoSuchAlgorithmException|NoSuchProviderException|InvalidAlgorithmParameterException e) {
             e.printStackTrace();
         }
 
         return myKeyPair;
     }
 
-    public String encryptToBase64(String clearText, SecretKey AESKey){
-        try {
-            Log.d(DEBUG,"clear text is of length "+clearText.getBytes().length);
-//            Cipher rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA1AndMGF1Padding","SC");
-//            rsaCipher.init(Cipher.ENCRYPT_MODE, myKeyPair.getPublic());
-//            byte[] bytes = rsaCipher.doFinal(clearText.getBytes());
-
-            Cipher aesCipher = Cipher.getInstance("AES","SC");
-            aesCipher.init(Cipher.ENCRYPT_MODE, AESKey);
-            byte[] bytes = aesCipher.doFinal(clearText.getBytes());
-            Log.d(DEBUG,"cipher bytes is of length "+bytes.length);
-            Log.d(DEBUG,"");
-
-            return Base64.encodeToString(bytes,Base64.DEFAULT);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchProviderException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        }
-        return "";
+    public String getPublicKeyString(KeyPair keyPair){
+        return Base64.encodeToString(keyPair.getPublic().getEncoded(),Base64.DEFAULT);
     }
 
-    public String decryptFromBase64(String cipherText, SecretKey AESKey){
+    public String getPrivateKeyString(KeyPair keyPair){
+        return Base64.encodeToString(keyPair.getPrivate().getEncoded(),Base64.DEFAULT);
+    }
+
+    public PublicKey getPublicKeyFromString(String publicKey){
         try {
-            byte[] bytes = Base64.decode(cipherText,Base64.DEFAULT);
-//            Cipher rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA1AndMGF1Padding","SC");
-//            rsaCipher.init(Cipher.DECRYPT_MODE, myKeyPair.getPrivate());
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA", "SC");
+            byte[] publicKeyBytes = Base64.decode(publicKey.getBytes("UTF-8"), Base64.DEFAULT);
+            X509EncodedKeySpec x509KeySpec = new X509EncodedKeySpec(publicKeyBytes);
+            return keyFactory.generatePublic(x509KeySpec);
+        } catch(UnsupportedEncodingException|InvalidKeySpecException|
+                NoSuchAlgorithmException|NoSuchProviderException e){
+            Log.d(DEBUG, "Public Key StringToKey Conversion: " + e.getMessage());
+        }
 
-            Cipher aesCipher = Cipher.getInstance("AES","SC");
-            aesCipher.init(Cipher.DECRYPT_MODE, AESKey);
+        return null;
+    }
 
-//            bytes = rsaCipher.doFinal(bytes);
+    public PrivateKey getPrivateKeyFromString(String privateKey){
+        try {
+            byte[] keyBytes = Base64.decode(privateKey.getBytes("utf-8"),decodeFlags);
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
+            KeyFactory fact = KeyFactory.getInstance("RSA");
+            PrivateKey key = fact.generatePrivate(keySpec);
+
+            return key;
+        } catch(UnsupportedEncodingException|InvalidKeySpecException|NoSuchAlgorithmException e){
+            Log.d(DEBUG, "Private Key StringToKey Conversion: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    public String encryptTextWithPublic(String clearText, PublicKey publicKey){
+        try {
+            Cipher aesCipher = Cipher.getInstance("RSA","SC");
+            aesCipher.init(Cipher.ENCRYPT_MODE, publicKey);
+            byte[] bytes = aesCipher.doFinal(clearText.getBytes());
+            return Base64.encodeToString(bytes,Base64.DEFAULT);
+        } catch (NoSuchAlgorithmException|NoSuchProviderException|NoSuchPaddingException|
+                InvalidKeyException|BadPaddingException|IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public String encryptTextWithPrivate(String clearText, PrivateKey privateKey){
+        try {
+            Cipher aesCipher = Cipher.getInstance("RSA","SC");
+            aesCipher.init(Cipher.ENCRYPT_MODE, privateKey);
+            byte[] bytes = aesCipher.doFinal(clearText.getBytes());
+            return Base64.encodeToString(bytes,Base64.DEFAULT);
+        } catch (NoSuchAlgorithmException|NoSuchProviderException|NoSuchPaddingException|
+                InvalidKeyException|BadPaddingException|IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public String decryptTextWithPublic(String cipherText, PublicKey publicKey){
+        try {
+            byte[] bytes = Base64.decode(cipherText,decodeFlags);
+            Cipher aesCipher = Cipher.getInstance("RSA","SC");
+            aesCipher.init(Cipher.DECRYPT_MODE, publicKey);
             bytes = aesCipher.doFinal(bytes);
 
             return new String(bytes,"UTF-8");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchProviderException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        } catch (BadPaddingException e) {
-            e.printStackTrace();
-        } catch (IllegalBlockSizeException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
+        } catch (NoSuchAlgorithmException|NoSuchProviderException|NoSuchPaddingException|
+                InvalidKeyException|BadPaddingException|IllegalBlockSizeException|
+                UnsupportedEncodingException e) {
             e.printStackTrace();
         } catch (RuntimeException e) {
-            Log.d(DEBUG,"Ouch",e);
+            Log.d(DEBUG,"Unable to Decrypt text, Public: ",e);
         }
-        return "";
+        return null;
+    }
+
+    public String decryptTextWithPrivate(String cipherText, PublicKey privateKey){
+        try {
+            byte[] bytes = Base64.decode(cipherText,decodeFlags);
+            Cipher aesCipher = Cipher.getInstance("AES","SC");
+            aesCipher.init(Cipher.DECRYPT_MODE, privateKey);
+            bytes = aesCipher.doFinal(bytes);
+
+            return new String(bytes,"UTF-8");
+        } catch (NoSuchAlgorithmException|NoSuchProviderException|NoSuchPaddingException|
+                InvalidKeyException|BadPaddingException|IllegalBlockSizeException|
+                UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (RuntimeException e) {
+            Log.d(DEBUG,"Unable to Decrypt text, Private: ",e);
+        }
+        return null;
     }
 }

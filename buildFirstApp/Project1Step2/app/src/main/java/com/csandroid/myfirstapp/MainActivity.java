@@ -1,8 +1,9 @@
 package com.csandroid.myfirstapp;
 
-import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -10,15 +11,19 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.csandroid.myfirstapp.db.ContactDBHandler;
+import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.db.MessageDBHandler;
+import com.csandroid.myfirstapp.models.Contact;
+import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.models.Message;
+import com.csandroid.myfirstapp.utils.EncryptHelper;
 
-import java.io.File;
+import java.security.KeyPair;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private MessageDBHandler db;
     private RecyclerView recList;
 
     @Override
@@ -30,6 +35,11 @@ public class MainActivity extends AppCompatActivity {
         if(null != getSupportActionBar()) {
             getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
+
+        // Run initial tasks on app creation (first time)
+        this.initAppCreationTasks();
+
+        // Setup recycler view/list
         this.setupRecyclerView();
     }
 
@@ -77,6 +87,11 @@ public class MainActivity extends AppCompatActivity {
         recList.invalidate();
     }
 
+    private List<Message> createList() {
+        MessageDBHandler db = new MessageDBHandler(this);
+        return db.getAllMessages();
+    }
+
     private void setupRecyclerView() {
         //Recycler view stuff
         recList = (RecyclerView) findViewById(R.id.main_cards_list);
@@ -86,36 +101,73 @@ public class MainActivity extends AppCompatActivity {
             llm.setOrientation(LinearLayoutManager.VERTICAL);
             recList.setLayoutManager(llm);
 
-            boolean dbExists = this.doesDatabaseExist(this.getApplicationContext(), "reactiveAppMessages");
-
-            this.db = new MessageDBHandler(this);
-
-            // Create 3 fake messages when the db is initially created
-            if (!dbExists) {
-                this.createFakeMessages();
-            }
-
             MessageAdapter ma = new MessageAdapter(createList());
             recList.setAdapter(ma);
         }
     }
 
-    private List<Message> createList() {
-        return this.db.getAllMessages();
+    private void initAppCreationTasks(){
+        // Tasks to be run when the app is first installed
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        if (!prefs.getBoolean("firstTime", false)) {
+            // Create Fake messages
+            this.createFakeMessages();
+
+            // Create Fake contacts
+            this.createFakeContacts();
+
+            // Create KeyPair
+            this.setupInitialKeyPair();
+
+            // mark first time has ran.
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putBoolean("firstTime", true);
+            editor.commit();
+        }
     }
 
-    private boolean doesDatabaseExist(Context context, String dbName) {
-        File dbFile = context.getDatabasePath(dbName);
-        return dbFile.exists();
+    private void setupInitialKeyPair(){
+        // When this app is first installed, generate a key pair for the user
+        // and store it in the local database.
+
+        // Generate New Key Pair and get values
+        EncryptHelper encryptHelper = new EncryptHelper();
+        KeyPair keyPair = encryptHelper.generateKeyPair();
+        String privateKeyString = encryptHelper.getPrivateKeyString(keyPair);
+        String publicKeyString = encryptHelper.getPublicKeyString(keyPair);
+
+        // Create instance of LKP to set values
+        LocalKeyPair lkp = new LocalKeyPair();
+        lkp.setPrivateKey(privateKeyString);
+        lkp.setPublicKey(publicKeyString);
+
+        // Save key pair to local database
+        LocalKeyPairDBHandler lkpdb = new LocalKeyPairDBHandler(this);
+        lkpdb.addKeyPair(lkp);
     }
 
     private void createFakeMessages(){
-        this.db.addMessage(new Message("johndoe", "Really Important, read immediately!",
+        MessageDBHandler db = new MessageDBHandler(this);
+        db.addMessage(new Message("johndoe", "Really Important, read immediately!",
                 "This is a super important, secret message!", 5));
-        this.db.addMessage(new Message("mikejones", "Hows it going?",
+        db.addMessage(new Message("mikejones", "Hows it going?",
                 "Just wanted to see what you were up to...", 15));
-        this.db.addMessage(new Message("stacyp", "Let me know if you get this.",
+        db.addMessage(new Message("stacyp", "Let me know if you get this.",
                 "This is my message with stuff...", 300));
+    }
+
+    private void createFakeContacts(){
+        ContactDBHandler db = new ContactDBHandler(this);
+        EncryptHelper encryptHelper = new EncryptHelper();
+
+        // Generate 3 keypairs, only utilizing public key since these contacts are fake
+        KeyPair kp1 = encryptHelper.generateKeyPair();
+        KeyPair kp2 = encryptHelper.generateKeyPair();
+        KeyPair kp3 = encryptHelper.generateKeyPair();
+
+        db.addContact(new Contact("johndoe", null, encryptHelper.getPublicKeyString(kp1)));
+        db.addContact(new Contact("mikejones", null, encryptHelper.getPublicKeyString(kp2)));
+        db.addContact(new Contact("stacyp", null, encryptHelper.getPublicKeyString(kp3)));
     }
 
 }

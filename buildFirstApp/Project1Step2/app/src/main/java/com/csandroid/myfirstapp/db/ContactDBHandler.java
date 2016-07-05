@@ -12,12 +12,12 @@ import java.util.List;
 
 public class ContactDBHandler extends SQLiteOpenHelper{
     // Database Version
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 3;
     // Database Name
     private static final String DATABASE_NAME = "reactiveAppContacts";
-    // Contacts table name
+    // Table name
     private static final String TABLE_CONTACTS = "contacts";
-    // Shops Table Columns names
+    // Table Columns names
     private static final String KEY_ID = "id";
     private static final String KEY_USERNAME = "username";
     private static final String KEY_USER_IMAGE = "user_image";
@@ -72,6 +72,7 @@ public class ContactDBHandler extends SQLiteOpenHelper{
 
             cursor.close();
         }
+        db.close(); // Closing database connection
 
         // return contact
         return contact;
@@ -93,6 +94,7 @@ public class ContactDBHandler extends SQLiteOpenHelper{
         }
 
         cursor.close();
+        db.close(); // Closing database connection
         return contact;
     }
 
@@ -118,6 +120,8 @@ public class ContactDBHandler extends SQLiteOpenHelper{
         }
 
         cursor.close();
+        db.close(); // Closing database connection
+
         // return contact list
         return contactList;
     }
@@ -127,9 +131,13 @@ public class ContactDBHandler extends SQLiteOpenHelper{
         String countQuery = "SELECT * FROM " + TABLE_CONTACTS;
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery(countQuery, null);
+        int count = cursor.getCount();
         cursor.close();
+
+        db.close(); // Closing database connection
+
         // return count
-        return cursor.getCount();
+        return count;
     }
 
     // Updating a contact
@@ -141,8 +149,13 @@ public class ContactDBHandler extends SQLiteOpenHelper{
         values.put(KEY_PUBLIC_KEY, contact.getPublicKey());
 
         // updating row
-        return db.update(TABLE_CONTACTS, values, KEY_ID + " = ?",
+        int result = db.update(TABLE_CONTACTS, values, KEY_ID + " = ?",
                 new String[]{String.valueOf(contact.getId())});
+
+        db.close(); // Closing database connection
+
+        // updating row
+        return result;
     }
 
     // Deleting a contact

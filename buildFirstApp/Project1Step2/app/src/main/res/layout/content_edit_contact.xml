@@ -22,11 +22,13 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:id="@+id/username"
-        android:layout_alignParentTop="true"
+        android:layout_alignParentTop="false"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="false"
         android:hint="Username"
-        android:background="@drawable/edittext_bg" />
+        android:background="@drawable/edittext_bg"
+        android:layout_below="@+id/textView8"
+        android:layout_marginTop="5dp" />
     
     <ImageView
         android:layout_width="200dp"
@@ -41,12 +43,12 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:id="@+id/publicKey"
-        android:layout_below="@+id/userImage"
+        android:layout_below="@+id/textView7"
         android:layout_alignParentLeft="false"
         android:layout_alignParentStart="false"
         android:layout_alignParentRight="false"
         android:layout_alignParentEnd="false"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="5dp"
         android:hint="Public Key"
         android:background="@drawable/edittext_bg"
         android:layout_marginBottom="70dp" />
@@ -61,6 +63,27 @@
         android:layout_alignParentStart="false"
         android:layout_alignParentEnd="false"
         android:layout_alignParentTop="false" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="Public Key"
+        android:id="@+id/textView7"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="false"
+        android:layout_below="@+id/userImage"
+        android:layout_marginTop="20dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="Username"
+        android:id="@+id/textView8"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true" />
 
 
 </RelativeLayout>
