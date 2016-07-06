@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
+import com.squareup.picasso.Picasso;
 
 public class EditContactActivity extends AppCompatActivity {
 
@@ -65,6 +66,7 @@ public class EditContactActivity extends AppCompatActivity {
         if(null != username && null != publicKey) {
             username.setText(contact.getUsername());
             publicKey.setText(contact.getPublicKey());
+            Picasso.with(this).load(contact.getUserImage()).into(userImage);
         }
     }
 

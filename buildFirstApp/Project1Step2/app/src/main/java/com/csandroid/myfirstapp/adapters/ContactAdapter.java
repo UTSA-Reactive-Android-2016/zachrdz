@@ -1,4 +1,4 @@
-package com.csandroid.myfirstapp;
+package com.csandroid.myfirstapp.adapters;
 
 import android.content.Context;
 import android.content.Intent;
@@ -10,7 +10,12 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.csandroid.myfirstapp.ComposeActivity;
+import com.csandroid.myfirstapp.EditContactActivity;
+import com.csandroid.myfirstapp.R;
+import com.csandroid.myfirstapp.ext.CircleTransform;
 import com.csandroid.myfirstapp.models.Contact;
+import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
@@ -30,46 +35,10 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
 
     @Override
     public void onBindViewHolder(ContactViewHolder contactViewHolder, int i) {
-        final Contact ci = contactList.get(i);
-        contactViewHolder.vUsername.setText(ci.getUsername());
-        //contactViewHolder.vUserImage.setBackground(ci.getUserImage());
-
-        contactViewHolder.itemView.findViewById(R.id.editContactBtn).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Context context = v.getContext();
-                Intent intent = new Intent(context, EditContactActivity.class);
-
-                //Create the bundle
-                Bundle bundle = new Bundle();
-
-                //Add your data to bundle
-                bundle.putString("contact_id", Integer.toString(ci.getId()));
-
-                //Add the bundle to the intent
-                intent.putExtras(bundle);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                context.startActivity(intent);
-            }
-        });
-
-        contactViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Context context = v.getContext();
-                Intent intent = new Intent(context, ComposeActivity.class);
-                //Create the bundle
-                Bundle bundle = new Bundle();
-
-                //Add your data to bundle
-                bundle.putString("contact_id", Integer.toString(ci.getId()));
-
-                //Add the bundle to the intent
-                intent.putExtras(bundle);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                context.startActivity(intent);
-            }
-        });
+        final Contact contact = contactList.get(i);
+        contactViewHolder.vUsername.setText(contact.getUsername());
+        Picasso.with(contactViewHolder.view.getContext()).load(contact.getUserImage()).transform(new CircleTransform()).into(contactViewHolder.vUserImage);
+        this.initOnClickListeners(contactViewHolder, contact);
     }
 
     @Override
@@ -85,13 +54,56 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
 
         protected TextView vUsername;
         protected ImageView vUserImage;
+        protected View view;
 
         public ContactViewHolder(View v) {
             super(v);
 
             vUsername = (TextView) v.findViewById(R.id.username);
             vUserImage = (ImageView) v.findViewById(R.id.userImage);
+            view = v;
         }
+    }
+
+    private void initOnClickListeners(ContactViewHolder contactViewHolder, final Contact contact){
+        // Open edit contact activity when list item's gear icon is clicked
+        contactViewHolder.itemView.findViewById(R.id.editContactBtn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Context context = v.getContext();
+                Intent intent = new Intent(context, EditContactActivity.class);
+
+                //Create the bundle
+                Bundle bundle = new Bundle();
+
+                //Add your data to bundle
+                bundle.putString("contact_id", Integer.toString(contact.getId()));
+
+                //Add the bundle to the intent
+                intent.putExtras(bundle);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                context.startActivity(intent);
+            }
+        });
+
+        // Open compose activity when list item is clicked
+        contactViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Context context = v.getContext();
+                Intent intent = new Intent(context, ComposeActivity.class);
+                //Create the bundle
+                Bundle bundle = new Bundle();
+
+                //Add your data to bundle
+                bundle.putString("contact_id", Integer.toString(contact.getId()));
+
+                //Add the bundle to the intent
+                intent.putExtras(bundle);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                context.startActivity(intent);
+            }
+        });
     }
 
 }

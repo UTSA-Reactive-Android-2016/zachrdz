@@ -46,7 +46,7 @@ public class MessageDBHandler extends SQLiteOpenHelper{
     }
 
     // Adding new message
-    public void addMessage(Message message) {
+    public int addMessage(Message message) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(KEY_SENDER_USERNAME, message.getSenderUsername());
@@ -56,8 +56,10 @@ public class MessageDBHandler extends SQLiteOpenHelper{
         values.put(KEY_TTL, message.getTTL());
 
         // Inserting Row
-        db.insert(TABLE_MESSAGES, null, values);
+        long id = db.insert(TABLE_MESSAGES, null, values);
         db.close(); // Closing database connection
+
+        return (int) id;
     }
 
     // Getting one message
@@ -68,7 +70,7 @@ public class MessageDBHandler extends SQLiteOpenHelper{
                         KEY_ID + "=?", new String[] { String.valueOf(id) }, null, null, null, null);
 
         Message message = new Message();
-        if (cursor != null) {
+        if (cursor != null && cursor.getCount() > 0) {
             cursor.moveToFirst();
             message = new Message(Integer.parseInt(cursor.getString(0)),
                     cursor.getString(1), cursor.getString(2), cursor.getString(3),

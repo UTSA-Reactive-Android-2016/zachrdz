@@ -7,7 +7,6 @@ import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -16,6 +15,7 @@ import android.widget.Toast;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.utils.EncryptHelper;
+import com.squareup.picasso.Picasso;
 
 import java.security.KeyPair;
 
@@ -48,6 +48,7 @@ public class AddContactActivity extends AppCompatActivity {
     public void initOnClickListeners(){
         final TextView usernameField = (TextView) findViewById(R.id.username);
         final TextView publicKeyField = (TextView) findViewById(R.id.publicKey);
+        final ImageView userImageField = (ImageView) findViewById(R.id.userImage);
 
         Button saveBtn = (Button) findViewById(R.id.button2);
         ImageButton deleteBtn = (ImageButton) findViewById(R.id.imageButton2);
@@ -65,6 +66,7 @@ public class AddContactActivity extends AppCompatActivity {
                         ContactDBHandler db = new ContactDBHandler(AddContactActivity.this);
                         Contact contact = new Contact();
                         contact.setUsername(usernameField.getText().toString());
+                        contact.setUserImage("http://i.imgur.com/a09vxsJ.png");
                         contact.setPublicKey(publicKeyField.getText().toString());
                         db.addContact(contact);
                         Toast.makeText(v.getContext(), "Added Contact: " + contact.getUsername(),
@@ -97,7 +99,7 @@ public class AddContactActivity extends AppCompatActivity {
             searchBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if(usernameField.getText().toString().length() > 0) {
+                    if(null != usernameField && usernameField.getText().toString().length() > 0) {
                         // Generate KeyPair to set for fake contact
                         EncryptHelper encryptHelper = new EncryptHelper();
                         KeyPair kp = encryptHelper.generateKeyPair();
@@ -107,10 +109,14 @@ public class AddContactActivity extends AppCompatActivity {
                             publicKeyField.setText(publicKeyString, TextView.BufferType.SPANNABLE);
                         }
 
+                        if(null != userImageField){
+                            Picasso.with(getApplicationContext()).load("http://i.imgur.com/a09vxsJ.png").into(userImageField);
+                        }
+
                         String msg = "User found!";
                         Toast.makeText(v.getContext(), "" + msg,
                                 Toast.LENGTH_LONG).show();
-                    } else if(usernameField.getText().toString().length() == 0){
+                    } else if(null != usernameField && usernameField.getText().toString().length() == 0){
                         String errMsg = "You didn't type anything to search!";
                         Toast.makeText(v.getContext(), "Error: " + errMsg,
                                 Toast.LENGTH_LONG).show();

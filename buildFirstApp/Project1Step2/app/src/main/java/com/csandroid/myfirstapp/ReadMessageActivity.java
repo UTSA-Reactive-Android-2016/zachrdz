@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
@@ -17,6 +18,7 @@ import com.csandroid.myfirstapp.models.Message;
 
 public class ReadMessageActivity extends AppCompatActivity {
     private int messageId;
+    private CountDownTimer ttlTimer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +47,57 @@ public class ReadMessageActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if(null != this.ttlTimer){
+            this.ttlTimer.cancel();
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();  // Always call the superclass method first
+
+        // Verify message still exists
+        MessageDBHandler db = new MessageDBHandler(this);
+        if(null == db.getMessage(this.messageId) || null == db.getMessage(this.messageId).getSenderUsername()){
+            //Message has been deleted, route back to list
+            Intent mainIntent = new Intent(ReadMessageActivity.this, MainActivity.class);
+            mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            Toast.makeText(ReadMessageActivity.this.getApplicationContext(),
+                    "Message Expired!",
+                    Toast.LENGTH_LONG).show();
+            startActivity(mainIntent);
+        } else{
+            if(this.ttlTimer != null){
+                this.ttlTimer.cancel();
+                this.ttlTimer = null;
+            }
+            this.populateFields();
+        }
+    }
+
+    @Override
+    public void onBackPressed()
+    {
+        if(null != this.ttlTimer){
+            this.ttlTimer.cancel();
+        }
+        Intent mainIntent = new Intent(ReadMessageActivity.this, MainActivity.class);
+        mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(mainIntent);
+    }
+
+    @Override
+    public void onPause()
+    {
+        super.onPause();
+        if(null != this.ttlTimer){
+            this.ttlTimer.cancel();
+        }
+    }
+
     private void initOnClickListeners(){
         Button replyBtn = (Button) findViewById(R.id.button);
         ImageButton deleteBtn = (ImageButton) findViewById(R.id.imageButton4);
@@ -53,6 +106,9 @@ public class ReadMessageActivity extends AppCompatActivity {
             replyBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    if(null != ttlTimer){
+                        ttlTimer.cancel();
+                    }
                     Intent composeIntent = new Intent(ReadMessageActivity.this, ComposeActivity.class);
                     //Create the bundle
                     Bundle bundle = new Bundle();
@@ -71,6 +127,9 @@ public class ReadMessageActivity extends AppCompatActivity {
             deleteBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    if(null != ttlTimer){
+                        ttlTimer.cancel();
+                    }
                     Intent mainIntent = new Intent(ReadMessageActivity.this, MainActivity.class);
                     MessageDBHandler db = new MessageDBHandler(v.getContext());
                     Message msg = db.getMessage(ReadMessageActivity.this.messageId);
@@ -130,25 +189,34 @@ public class ReadMessageActivity extends AppCompatActivity {
         boolean stillAlive = (createdAt + ttl) > currTime;
 
         if(stillAlive) {
-            final int ttlInMillis = ((createdAt + ttl) - currTime) * 1000;
+            // Need this check, don't want to setup multiple timers!
+            if(null == this.ttlTimer) {
+                final int ttlInMillis = ((createdAt + ttl) - currTime) * 1000;
 
-            new CountDownTimer(ttlInMillis, 1000) {
-                public void onTick(long millisUntilFinished) {
-                    msgTTLField.setText("TTL: " + millisUntilFinished / 1000 + " sec");
-                }
+                this.ttlTimer = new CountDownTimer(ttlInMillis, 1000) {
+                    public void onTick(long millisUntilFinished) {
+                        String tickText = "TTL: " + millisUntilFinished / 1000 + " sec";
+                        msgTTLField.setText(tickText);
+                    }
 
-                public void onFinish() {
-                    // Message has expired, delete it locally and send user back to list
-                    Intent mainIntent = new Intent(ReadMessageActivity.this, MainActivity.class);
-                    db.deleteMessage(msg);
-                    mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    Toast.makeText(ReadMessageActivity.this.getApplicationContext(),
-                            "Message Expired!",
-                            Toast.LENGTH_LONG).show();
-                    startActivity(mainIntent);
-                }
-            }.start();
+                    public void onFinish() {
+                        Log.d("Zach:", "Timer Finished!");
+                        // Message has expired, delete it locally and send user back to list
+                        Intent mainIntent = new Intent(ReadMessageActivity.this, MainActivity.class);
+                        db.deleteMessage(msg);
+                        mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        Toast.makeText(ReadMessageActivity.this.getApplicationContext(),
+                                "Message Expired!",
+                                Toast.LENGTH_LONG).show();
+                        startActivity(mainIntent);
+                    }
+                }.start();
+            }
         } else{
+            // Cancel timer
+            if(null != this.ttlTimer) {
+                this.ttlTimer.cancel();
+            }
             // Message has expired, delete it locally and send user back to list
             Intent mainIntent = new Intent(ReadMessageActivity.this, MainActivity.class);
             db.deleteMessage(msg);
@@ -159,5 +227,4 @@ public class ReadMessageActivity extends AppCompatActivity {
             startActivity(mainIntent);
         }
     }
-
 }

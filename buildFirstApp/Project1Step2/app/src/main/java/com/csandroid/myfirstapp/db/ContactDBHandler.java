@@ -43,7 +43,7 @@ public class ContactDBHandler extends SQLiteOpenHelper{
     }
 
     // Adding new contact
-    public void addContact(Contact contact) {
+    public int addContact(Contact contact) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(KEY_USERNAME, contact.getUsername());
@@ -51,8 +51,9 @@ public class ContactDBHandler extends SQLiteOpenHelper{
         values.put(KEY_PUBLIC_KEY, contact.getPublicKey());
 
         // Inserting Row
-        db.insert(TABLE_CONTACTS, null, values);
+        long id = db.insert(TABLE_CONTACTS, null, values);
         db.close(); // Closing database connection
+        return (int) id;
     }
 
     // Getting one contact
@@ -66,7 +67,7 @@ public class ContactDBHandler extends SQLiteOpenHelper{
 
         Contact contact = new Contact();
 
-        if(null != cursor) {
+        if(null != cursor && cursor.getCount() > 0) {
             contact = new Contact(Integer.parseInt(cursor.getString(0)),
                     cursor.getString(1), cursor.getString(2), cursor.getString(3));
 
@@ -100,7 +101,7 @@ public class ContactDBHandler extends SQLiteOpenHelper{
 
     // Getting All Contacts
     public List<Contact> getAllContacts() {
-        List<Contact> contactList = new ArrayList<Contact>();
+        List<Contact> contactList = new ArrayList<>();
         // Select All Query
         String selectQuery = "SELECT * FROM " + TABLE_CONTACTS;
         SQLiteDatabase db = this.getWritableDatabase();

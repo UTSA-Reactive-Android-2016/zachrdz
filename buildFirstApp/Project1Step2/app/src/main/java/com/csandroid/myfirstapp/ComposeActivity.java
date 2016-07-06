@@ -12,12 +12,10 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
-import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.utils.EncryptHelper;
 
 import java.security.PublicKey;
@@ -36,25 +34,7 @@ public class ComposeActivity extends AppCompatActivity {
         }
 
         this.initOnClickListeners();
-
-        EditText toInput = (EditText) findViewById(R.id.msg_receiver);
-
-        //Get the bundle
-        Bundle bundle = getIntent().getExtras();
-        if(null != bundle && null != toInput){
-            String replyToUsername = bundle.getString("reply_to_username");
-            String replyToId = bundle.getString("contact_id");
-
-            ContactDBHandler db = new ContactDBHandler(this);
-            if(null != replyToUsername){
-                Contact contact = db.getContactByUsername(replyToUsername);
-                toInput.setText(contact.getUsername());
-            }
-            if(null != replyToId){
-                Contact contact = db.getContact(Integer.parseInt(replyToId));
-                toInput.setText(contact.getUsername());
-            }
-        }
+        this.populateFields();
     }
 
     @Override
@@ -86,7 +66,7 @@ public class ComposeActivity extends AppCompatActivity {
                 }
             });
         }
-        if(null != sendBtn && null != composedMsg) {
+        if(null != sendBtn && null != composedMsg && null != toInput) {
             sendBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -156,6 +136,27 @@ public class ComposeActivity extends AppCompatActivity {
                     builder.show();
                 }
             });
+        }
+    }
+
+    private void populateFields(){
+        EditText toInput = (EditText) findViewById(R.id.msg_receiver);
+
+        //Get the bundle
+        Bundle bundle = getIntent().getExtras();
+        if(null != bundle && null != toInput){
+            String replyToUsername = bundle.getString("reply_to_username");
+            String replyToId = bundle.getString("contact_id");
+
+            ContactDBHandler db = new ContactDBHandler(this);
+            if(null != replyToUsername){
+                Contact contact = db.getContactByUsername(replyToUsername);
+                toInput.setText(contact.getUsername());
+            }
+            if(null != replyToId){
+                Contact contact = db.getContact(Integer.parseInt(replyToId));
+                toInput.setText(contact.getUsername());
+            }
         }
     }
 

@@ -82,9 +82,8 @@ public class EncryptHelper {
             byte[] keyBytes = Base64.decode(privateKey.getBytes("utf-8"),decodeFlags);
             PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
             KeyFactory fact = KeyFactory.getInstance("RSA");
-            PrivateKey key = fact.generatePrivate(keySpec);
 
-            return key;
+            return fact.generatePrivate(keySpec);
         } catch(UnsupportedEncodingException|InvalidKeySpecException|NoSuchAlgorithmException e){
             Log.d(DEBUG, "Private Key StringToKey Conversion: " + e.getMessage());
         }
