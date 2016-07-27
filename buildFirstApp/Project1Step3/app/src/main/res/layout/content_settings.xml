@@ -39,7 +39,8 @@
         android:layout_below="@+id/servername"
         android:layout_centerHorizontal="true"
         android:background="@android:drawable/ic_menu_my_calendar"
-        android:layout_marginTop="20dp" />
+        android:layout_marginTop="20dp"
+        android:tag="uImage"/>
 
     <EditText
         android:layout_width="fill_parent"
