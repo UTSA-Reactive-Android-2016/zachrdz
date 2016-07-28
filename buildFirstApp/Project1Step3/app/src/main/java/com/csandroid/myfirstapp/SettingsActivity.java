@@ -4,12 +4,14 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -254,7 +256,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             @Override
             public void onGoodAPIVersion() {
-                Toast.makeText(SettingsActivity.this,"API Version Matched!", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(SettingsActivity.this,"API Version Matched!", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -351,6 +353,14 @@ public class SettingsActivity extends AppCompatActivity {
         // User Name
         String username = getUserNameFieldValue();
         getPreferences(Context.MODE_PRIVATE).edit().putString("username",username).apply();
+
+
+        // Set Shared Preferences for Application Wide Use
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("loggedIn", getPreferences(Context.MODE_PRIVATE).getBoolean("loggedIn",false));
+        editor.putString("username", getPreferences(Context.MODE_PRIVATE).getString("username",""));
+        editor.apply();
     }
 
     /************************** Action Functions **************************************************/
@@ -358,6 +368,7 @@ public class SettingsActivity extends AppCompatActivity {
     public void doRegister(View view) {
         // Set Server Address by getting it from EditText field
         serverAPI.setServerName(getServerNameFieldValue());
+        serverAPI.checkAPIVersion();
 
         // Set username by getting it from EditText field
         String username = getUserNameFieldValue();
@@ -421,11 +432,13 @@ public class SettingsActivity extends AppCompatActivity {
 
     public void doLogin() {
         serverAPI.setServerName(getServerNameFieldValue());
+        serverAPI.checkAPIVersion();
         serverAPI.login(getUserNameFieldValue(),myCrypto);
     }
 
     public void doLogout() {
         serverAPI.setServerName(getServerNameFieldValue());
+        serverAPI.checkAPIVersion();
         serverAPI.logout(getUserNameFieldValue(),myCrypto);
     }
 

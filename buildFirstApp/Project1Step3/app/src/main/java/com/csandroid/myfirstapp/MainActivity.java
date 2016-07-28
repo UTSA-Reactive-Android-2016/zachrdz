@@ -64,6 +64,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item){
         int id = item.getItemId();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        Boolean loggedIn = prefs.getBoolean("loggedIn", false);
 
         switch(id){
             case R.id.action_settings :
@@ -72,14 +74,22 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(settingsIntent);
                 return true;
             case R.id.action_contacts :
-                Intent contactsIntent = new Intent(MainActivity.this, ContactsActivity.class);
-                contactsIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(contactsIntent);
+                if(loggedIn) {
+                    Intent contactsIntent = new Intent(MainActivity.this, ContactsActivity.class);
+                    contactsIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(contactsIntent);
+                } else{
+                    Toast.makeText(getApplicationContext(), "You must login first.", Toast.LENGTH_LONG).show();
+                }
                 return true;
             case R.id.action_compose :
-                Intent composeIntent = new Intent(MainActivity.this, ComposeActivity.class);
-                composeIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(composeIntent);
+                if(loggedIn) {
+                    Intent composeIntent = new Intent(MainActivity.this, ComposeActivity.class);
+                    composeIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(composeIntent);
+                } else{
+                    Toast.makeText(getApplicationContext(), "You must login first.", Toast.LENGTH_LONG).show();
+                }
                 return true;
             default :
                 return super.onOptionsItemSelected(item);
