@@ -669,4 +669,9 @@ public class ServerAPI implements AppAPI{
         }
     }
 
+    // Zach Rodriguez: Addon function to allow for multiple users to use the app
+    public void updateMyCrypto(Crypto crypto){
+        ourInstance.myCrypto = crypto;
+    }
+
 }

@@ -17,7 +17,7 @@ import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Base64;
-import android.util.Log;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
@@ -41,6 +41,8 @@ public class SettingsActivity extends AppCompatActivity {
     LocalKeyPairDBHandler localKeyPairDB;
     Crypto myCrypto;
 
+    private Menu settingsMenu;
+
     // Storage Permissions
     private static int RESULT_LOAD_IMG = 1;
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -57,6 +59,7 @@ public class SettingsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_settings);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        setTitle("Settings");
 
         if(null != getSupportActionBar()) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -71,12 +74,34 @@ public class SettingsActivity extends AppCompatActivity {
         this.initServerAPI();
     }
 
+    // Menu icons are inflated just as they were with actionbar
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.settings_menu, menu);
+        this.settingsMenu = menu;
+
+        Boolean loggedIn = getPreferences(Context.MODE_PRIVATE).getBoolean("loggedIn",false);
+
+        // Show appropriate log in buttons
+        settingsMenu.findItem(R.id.action_login).setVisible(!loggedIn);
+        settingsMenu.findItem(R.id.action_logout).setVisible(loggedIn);
+        return true;
+    }
+
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
                 // app icon in action bar clicked; goto parent activity.
                 this.finish();
+                return true;
+            case R.id.action_login :
+                doLogin();
+                return true;
+            case R.id.action_logout :
+                doLogout();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -116,6 +141,7 @@ public class SettingsActivity extends AppCompatActivity {
         Button registerBtn = (Button) findViewById(R.id.register);
         ImageView userImage = (ImageView) findViewById(R.id.userImage);
         EditText usernameField = (EditText) findViewById(R.id.username);
+        EditText serverNameField = (EditText) findViewById(R.id.servername);
 
         if(null != registerBtn) {
             registerBtn.setOnClickListener(new View.OnClickListener() {
@@ -144,23 +170,66 @@ public class SettingsActivity extends AppCompatActivity {
             // with associated values if that username exists locally, else empty those fields.
             usernameField.addTextChangedListener(new TextWatcher() {
                 @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    // Upon change of field, automatically log out user if they are logged in
+                    Boolean loggedIn = getPreferences(Context.MODE_PRIVATE).getBoolean("loggedIn",false);
+
+                    if(loggedIn){
+                        doLogout();
+                        Toast.makeText(getApplicationContext(),
+                                "You were logged out due to username change.",
+                                Toast.LENGTH_LONG).show();
+                    }
+                }
 
                 @Override
                 public void onTextChanged(CharSequence s, int start, int before, int count) {}
 
                 @Override
                 public void afterTextChanged(Editable s) {
+                    // User is actively editing username field. Update Key Pair appropriately
                     LocalKeyPair localKeyPair = localKeyPairDB.getKeyPairByUsername(getUserNameFieldValue());
                     if(null != localKeyPair){
                         // Update Public and Private Key Field values
                         setPrivateKeyFieldValue(localKeyPair.getPrivateKey());
                         setPublicKeyFieldValue(localKeyPair.getPublicKey());
+
+                        // Update Key Pair from Activities Preferences
+                        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPrivateKey,localKeyPair.getPrivateKey()).apply();
+                        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey,localKeyPair.getPublicKey()).apply();
+
+                        // Update myCrypto and in turn update ServerAPI with it
+                        myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
+                        serverAPI.updateMyCrypto(myCrypto);
+
                     } else{
                         setPrivateKeyFieldValue("");
                         setPublicKeyFieldValue("");
                     }
                 }
+            });
+        }
+        if(null != serverNameField){
+            // When the user edits the servername text field, log them out if they are logged in
+            serverNameField.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    // Upon change of field, automatically log out user if they are logged in
+                    Boolean loggedIn = getPreferences(Context.MODE_PRIVATE).getBoolean("loggedIn",false);
+
+                    if(loggedIn){
+                        doLogout();
+                        Toast.makeText(getApplicationContext(),
+                                "You were logged out due to server address change.",
+                                Toast.LENGTH_LONG).show();
+                    }
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {}
             });
         }
 
@@ -205,6 +274,9 @@ public class SettingsActivity extends AppCompatActivity {
 
             @Override
             public void onLoginSucceeded() {
+                getPreferences(Context.MODE_PRIVATE).edit().putBoolean("loggedIn",true).apply();
+                settingsMenu.findItem(R.id.action_login).setVisible(false);
+                settingsMenu.findItem(R.id.action_logout).setVisible(true);
                 Toast.makeText(SettingsActivity.this,"Logged in!", Toast.LENGTH_SHORT).show();
             }
 
@@ -215,6 +287,9 @@ public class SettingsActivity extends AppCompatActivity {
 
             @Override
             public void onLogoutSucceeded() {
+                getPreferences(Context.MODE_PRIVATE).edit().putBoolean("loggedIn",false).apply();
+                settingsMenu.findItem(R.id.action_login).setVisible(true);
+                settingsMenu.findItem(R.id.action_logout).setVisible(false);
                 Toast.makeText(SettingsActivity.this,"Logged out!", Toast.LENGTH_SHORT).show();
             }
 
@@ -307,16 +382,12 @@ public class SettingsActivity extends AppCompatActivity {
             // Check if we've already generated a key pair for that name,
             // that may be stored in our local sqlite db.
             if(null != localKeyPair){
-                Log.d("ZACH: ", "[" + username + "] USER EXISTS");
                 // Key Pair exists locally for this username, register the user.
                 serverAPI.register(username, userImage, localKeyPair.getPublicKey());
 
                 privateKey = localKeyPair.getPrivateKey();
                 publicKey = localKeyPair.getPublicKey();
-                Log.d("ZACH: ", "UE Private: " + privateKey);
-                Log.d("ZACH: ", "UE Public: " + publicKey);
             } else{
-                Log.d("ZACH: ", "[" + username + "] USER DOES NOT EXIST");
                 // Key Pair does not exist for this username (User possibly edited username text field)
 
                 // Clear out Key Pair from Activities Preferences
@@ -340,8 +411,6 @@ public class SettingsActivity extends AppCompatActivity {
 
                 privateKey = newPrivateKey;
                 publicKey = newPublicKey;
-                Log.d("ZACH: ", "UDNE Private: " + privateKey);
-                Log.d("ZACH: ", "UDNE Public: " + publicKey);
             }
 
             // Update Public and Private Key Field values
@@ -350,15 +419,13 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
-    public void doLogin(View view) {
+    public void doLogin() {
         serverAPI.setServerName(getServerNameFieldValue());
-
         serverAPI.login(getUserNameFieldValue(),myCrypto);
     }
 
-    public void doLogout(View view) {
+    public void doLogout() {
         serverAPI.setServerName(getServerNameFieldValue());
-
         serverAPI.logout(getUserNameFieldValue(),myCrypto);
     }
 
@@ -428,8 +495,7 @@ public class SettingsActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show();
             }
         } catch (Exception e) {
-            Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG)
-                    .show();
+            Toast.makeText(this, "Something went wrong", Toast.LENGTH_LONG).show();
         }
 
     }

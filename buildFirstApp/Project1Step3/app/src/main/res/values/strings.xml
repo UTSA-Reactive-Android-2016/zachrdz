@@ -15,4 +15,6 @@
     <string name="title_activity_edit_contact">EditContactActivity</string>
     <string name="title_activity_read_message">ReadMessageActivity</string>
     <string name="title_activity_add_contact">AddContactActivity</string>
+    <string name="logout">Logout</string>
+    <string name="login">Login</string>
 </resources>
