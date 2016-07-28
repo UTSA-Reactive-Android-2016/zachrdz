@@ -105,7 +105,7 @@ public class AddContactActivity extends AppCompatActivity {
                         Toast.makeText(v.getContext(), "Error: " + errMsg,
                                 Toast.LENGTH_LONG).show();
                     } else{
-                        String errMsg = "User was not found. (Click search button up top to fake find them)";
+                        String errMsg = "User was not found. (Click search button up top to find them)";
                         Toast.makeText(v.getContext(), "Error: " + errMsg,
                                 Toast.LENGTH_LONG).show();
                     }
