@@ -38,6 +38,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class Crypto {
     private static String LOG = "Crypto";
+    public static final String prefPrivateKey = "RSAPrivateKey";
+    public static final String prefPublicKey = "RSAPublicKey";
 
     static {
         Security.insertProviderAt(new org.spongycastle.jce.provider.BouncyCastleProvider(),1);
@@ -47,15 +49,15 @@ public class Crypto {
 
     @TargetApi(Build.VERSION_CODES.GINGERBREAD)
     public Crypto(SharedPreferences preferences){
-        String RSAPrivateKey = preferences.getString("RSAPrivateKey","");
-        String RSAPublicKey  = preferences.getString("RSAPublicKey","");
+        String RSAPrivateKey = preferences.getString(prefPrivateKey,"");
+        String RSAPublicKey  = preferences.getString(prefPublicKey,"");
 
         Log.d("Crypto","Public key string: "+RSAPublicKey);
         Log.d("Crypto","Decoded: "+getPublicKeyFromString(RSAPublicKey));
 
 
         if(RSAPrivateKey.isEmpty() || !readKeyPair(RSAPrivateKey,RSAPublicKey)) {
-            myRSAKeyPair = geneateNewRSAKeyPair();
+            myRSAKeyPair = generateNewRSAKeyPair();
         }
     }
 
@@ -63,8 +65,8 @@ public class Crypto {
         String rsaPublicString = Base64.encodeToString(myRSAKeyPair.getPublic().getEncoded(),Base64.DEFAULT);
         String rsaPrivateString = Base64.encodeToString(myRSAKeyPair.getPrivate().getEncoded(),Base64.DEFAULT);
         SharedPreferences.Editor editor = preferences.edit();
-        editor.putString("RSAPublicKey",rsaPublicString);
-        editor.putString("RSAPrivateKey",rsaPrivateString);
+        editor.putString(prefPublicKey,rsaPublicString);
+        editor.putString(prefPrivateKey,rsaPrivateString);
         Log.d("LOG","Public: "+rsaPublicString);
         editor.commit();
     }
@@ -113,7 +115,7 @@ public class Crypto {
         return false;
     }
 
-    private KeyPair geneateNewRSAKeyPair(){
+    private KeyPair generateNewRSAKeyPair(){
         SecureRandom random = new SecureRandom();
         RSAKeyGenParameterSpec spec = new RSAKeyGenParameterSpec(2048, RSAKeyGenParameterSpec.F4);
         KeyPairGenerator generator = null;

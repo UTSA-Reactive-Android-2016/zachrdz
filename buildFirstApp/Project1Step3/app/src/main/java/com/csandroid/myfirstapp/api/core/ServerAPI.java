@@ -1,4 +1,4 @@
-package com.csandroid.myfirstapp.api;
+package com.csandroid.myfirstapp.api.core;
 
 import android.content.Context;
 import android.text.TextUtils;
@@ -27,7 +27,7 @@ import java.util.ArrayList;
 
 import javax.crypto.SecretKey;
 
-public class ServerAPI {
+public class ServerAPI implements AppAPI{
     public final String API_VERSION = "0.4.0";
     private static String LOG       = "ServerAPI";
 

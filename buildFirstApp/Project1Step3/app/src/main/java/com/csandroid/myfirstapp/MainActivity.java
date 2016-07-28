@@ -44,13 +44,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Run initial tasks on app creation (first time)
-        this.initAppCreationTasks();
+        //this.initAppCreationTasks();
 
         // Setup recycler view/list
         this.setupRecyclerView();
 
         // Setup on click listeners
-        this.initOnClickListeners();
+        //this.initOnClickListeners();
     }
 
     // Menu icons are inflated just as they were with actionbar

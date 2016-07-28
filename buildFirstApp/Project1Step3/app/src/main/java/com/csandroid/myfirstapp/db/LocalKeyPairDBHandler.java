@@ -17,6 +17,7 @@ public class LocalKeyPairDBHandler extends SQLiteOpenHelper{
     private static final String TABLE_KEY_PAIR = "keyPair";
     // Table Columns names
     private static final String KEY_ID = "id";
+    private static final String KEY_USERNAME = "key_username";
     private static final String KEY_PRIVATE_KEY = "private_key";
     private static final String KEY_PUBLIC_KEY = "public_key";
 
@@ -27,7 +28,7 @@ public class LocalKeyPairDBHandler extends SQLiteOpenHelper{
     @Override
     public void onCreate(SQLiteDatabase db) {
         String CREATE_KEY_PAIR_TABLE = "CREATE TABLE " + TABLE_KEY_PAIR + "("
-                + KEY_ID + " INTEGER PRIMARY KEY," + KEY_PRIVATE_KEY + " TEXT," +
+                + KEY_ID + " INTEGER PRIMARY KEY," + KEY_USERNAME + " TEXT," + KEY_PRIVATE_KEY + " TEXT," +
                 KEY_PUBLIC_KEY + " TEXT" + ")";
         db.execSQL(CREATE_KEY_PAIR_TABLE);
     }
@@ -41,18 +42,15 @@ public class LocalKeyPairDBHandler extends SQLiteOpenHelper{
 
     // Adding new keypair
     public void addKeyPair(LocalKeyPair kp) {
-        // Check to make sure a key pair doesn't already exist.
-        // Only want one to exist in this table, ever.
-        if(this.getKeyPairCount() < 1) {
-            SQLiteDatabase db = this.getWritableDatabase();
-            ContentValues values = new ContentValues();
-            values.put(KEY_PRIVATE_KEY, kp.getPrivateKey());
-            values.put(KEY_PUBLIC_KEY, kp.getPublicKey());
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(KEY_USERNAME, kp.getUsername());
+        values.put(KEY_PRIVATE_KEY, kp.getPrivateKey());
+        values.put(KEY_PUBLIC_KEY, kp.getPublicKey());
 
-            // Inserting Row
-            db.insert(TABLE_KEY_PAIR, null, values);
-            db.close(); // Closing database connection
-        }
+        // Inserting Row
+        db.insert(TABLE_KEY_PAIR, null, values);
+        db.close(); // Closing database connection
     }
 
     // Getting one keypair, should only be one in database, so no params needed
@@ -66,13 +64,38 @@ public class LocalKeyPairDBHandler extends SQLiteOpenHelper{
         // should only be one row, but still need this
         if (cursor.moveToFirst()) {
             kp.setId(Integer.parseInt(cursor.getString(0)));
-            kp.setPrivateKey(cursor.getString(1));
-            kp.setPublicKey(cursor.getString(2));
+            kp.setUsername(cursor.getString(1));
+            kp.setPrivateKey(cursor.getString(2));
+            kp.setPublicKey(cursor.getString(3));
         }
 
         cursor.close();
         db.close(); // Closing database connection
         return kp;
+    }
+
+    // Getting keypair associated with stored username
+    public LocalKeyPair getKeyPairByUsername(String username) {
+        String selectQuery = "SELECT * FROM " + TABLE_KEY_PAIR +
+                " WHERE " + KEY_USERNAME + "='" + username.trim() + "' LIMIT 1";
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        LocalKeyPair kp = new LocalKeyPair();
+
+        // looping through all rows and adding to list
+        // should only be one row, but still need this
+        if (cursor.moveToFirst()) {
+            kp.setId(Integer.parseInt(cursor.getString(0)));
+            kp.setUsername(cursor.getString(1));
+            kp.setPrivateKey(cursor.getString(2));
+            kp.setPublicKey(cursor.getString(3));
+
+            cursor.close();
+            db.close(); // Closing database connection
+            return kp;
+        }
+
+        return null;
     }
 
     // Getting local key pair count, should only be one,
@@ -94,6 +117,7 @@ public class LocalKeyPairDBHandler extends SQLiteOpenHelper{
     public int updateKeyPair(LocalKeyPair kp) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
+        values.put(KEY_USERNAME, kp.getUsername());
         values.put(KEY_PRIVATE_KEY, kp.getPrivateKey());
         values.put(KEY_PUBLIC_KEY, kp.getPublicKey());
 

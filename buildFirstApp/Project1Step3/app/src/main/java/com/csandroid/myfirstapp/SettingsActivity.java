@@ -8,42 +8,37 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Base64;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.VolleyError;
-import com.csandroid.myfirstapp.api.ServerAPI;
+import com.csandroid.myfirstapp.api.core.ServerAPI;
 import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.utils.Crypto;
-import com.squareup.picasso.Picasso;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 
 public class SettingsActivity extends AppCompatActivity {
 
     ServerAPI serverAPI;
-    LocalKeyPair lkp;
+    LocalKeyPairDBHandler localKeyPairDB;
     Crypto myCrypto;
 
     // Storage Permissions
@@ -53,17 +48,8 @@ public class SettingsActivity extends AppCompatActivity {
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
-    private String userImageSelected;
 
     HashMap<String,ServerAPI.UserInfo> myUserMap = new HashMap<>();
-
-    private String getUserName(){
-        return ((EditText)findViewById(R.id.username)).getText().toString();
-    }
-
-    private String getServerName(){
-        return ((EditText)findViewById(R.id.servername)).getText().toString();
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,28 +83,39 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
+    /************************** Activity Start Up *************************************************/
+
     public void populateFields(){
-        TextView userPublicKey = (TextView)findViewById(R.id.userPublicKey);
-        TextView userPrivateKey = (TextView)findViewById(R.id.userPrivateKey);
-        TextView username = (TextView)findViewById(R.id.username);
-        ImageView userImage = (ImageView)findViewById(R.id.userImage);
 
-        LocalKeyPairDBHandler db = new LocalKeyPairDBHandler(this);
-        lkp = db.getKeyPair();
+        // Initialize LocalKeyPairDBHandler
+        localKeyPairDB = new LocalKeyPairDBHandler(this);
 
-        if(null != userPublicKey && null != userPrivateKey && null != userImage && null != username) {
-            String coolDog = "https://pbs.twimg.com/profile_images/565602752152076288/NxWEBoTo.jpeg";
+        // Server Address
+        String serverName = getPreferences(Context.MODE_PRIVATE).getString("serverName","127.0.0.1");
+        setServerNameFieldValue(serverName);
 
-            username.setText("zachrdz");
-            userPublicKey.setText(lkp.getPublicKey());
-            userPrivateKey.setText(lkp.getPrivateKey());
-            Picasso.with(getApplicationContext()).load(coolDog).into(userImage);
+        // Username
+        String username = getPreferences(Context.MODE_PRIVATE).getString("username","");
+        setUserNameFieldValue(username);
+
+        // User Image
+        String userImage = getPreferences(Context.MODE_PRIVATE).getString("userImage","");
+        if(!userImage.equals(""))
+            setUserImageFieldValue(userImage);
+
+        // Get local key pair for username and set viewable fields
+        LocalKeyPair localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
+        if(null != localKeyPair){
+            setPublicKeyFieldValue(localKeyPair.getPublicKey());
+            setPrivateKeyFieldValue(localKeyPair.getPrivateKey());
         }
+
     }
 
     public void initOnClickListeners(){
         Button registerBtn = (Button) findViewById(R.id.register);
         ImageView userImage = (ImageView) findViewById(R.id.userImage);
+        EditText usernameField = (EditText) findViewById(R.id.username);
 
         if(null != registerBtn) {
             registerBtn.setOnClickListener(new View.OnClickListener() {
@@ -142,19 +139,40 @@ public class SettingsActivity extends AppCompatActivity {
                 }
             });
         }
+        if(null != usernameField){
+            // When the user edits the username text field, update the public/private key fields
+            // with associated values if that username exists locally, else empty those fields.
+            usernameField.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    LocalKeyPair localKeyPair = localKeyPairDB.getKeyPairByUsername(getUserNameFieldValue());
+                    if(null != localKeyPair){
+                        // Update Public and Private Key Field values
+                        setPrivateKeyFieldValue(localKeyPair.getPrivateKey());
+                        setPublicKeyFieldValue(localKeyPair.getPublicKey());
+                    } else{
+                        setPrivateKeyFieldValue("");
+                        setPublicKeyFieldValue("");
+                    }
+                }
+            });
+        }
+
     }
 
     public void initServerAPI(){
-        String serverName = getPreferences(Context.MODE_PRIVATE).getString("ServerName","127.0.0.1");
-        ((EditText)findViewById(R.id.servername)).setText(serverName);
-
         myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
         myCrypto.saveKeys(getPreferences(Context.MODE_PRIVATE));
 
-        serverAPI = ServerAPI.getInstance(this.getApplicationContext(),
-                myCrypto);
+        serverAPI = ServerAPI.getInstance(this.getApplicationContext(), myCrypto);
 
-        serverAPI.setServerName(getServerName());
+        serverAPI.setServerName(getServerNameFieldValue());
         serverAPI.setServerPort("25666");
 
         serverAPI.registerListener(new ServerAPI.Listener() {
@@ -238,38 +256,116 @@ public class SettingsActivity extends AppCompatActivity {
             @Override
             public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {
                 Toast.makeText(SettingsActivity.this,String.format("got message from %s",sender),Toast.LENGTH_SHORT).show();
-
             }
         });
     }
 
+    /*
+     *  Make sure to save off fields to preferences before closed or interupted
+     */
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        // Server Address
+        String serverName = getServerNameFieldValue();
+        getPreferences(Context.MODE_PRIVATE).edit().putString("serverName",serverName).apply();
+
+        // User Image gets saved to preferences on user selection callback (Should be good)
+
+        // User Name
+        String username = getUserNameFieldValue();
+        getPreferences(Context.MODE_PRIVATE).edit().putString("username",username).apply();
+    }
+
+    /************************** Action Functions **************************************************/
+
     public void doRegister(View view) {
-        serverAPI.setServerName(getServerName());
+        // Set Server Address by getting it from EditText field
+        serverAPI.setServerName(getServerNameFieldValue());
 
-        if(userImageSelected == null){
-            Toast.makeText(this, "You must select an image, other than default.", Toast.LENGTH_LONG)
-                    .show();
+        // Set username by getting it from EditText field
+        String username = getUserNameFieldValue();
+
+        // Set user image from activities preferences
+        String userImage = getPreferences(Context.MODE_PRIVATE).getString("userImage","");
+
+        // Initial Private & Public key holders
+        String privateKey;
+        String publicKey;
+
+        // Make sure an image is selected
+        if(userImage.equals("")){
+            Toast.makeText(this, "You must select a profile image.", Toast.LENGTH_LONG).show();
+        } else if(null == username || username.length() < 3){
+            // Username length must at least be 3
+            Toast.makeText(this, "Your username must be at least 3 character long", Toast.LENGTH_LONG).show();
+        } else {
+            // Validation passed, attempt to register user.
+            LocalKeyPair localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
+
+            // Check if we've already generated a key pair for that name,
+            // that may be stored in our local sqlite db.
+            if(null != localKeyPair){
+                Log.d("ZACH: ", "[" + username + "] USER EXISTS");
+                // Key Pair exists locally for this username, register the user.
+                serverAPI.register(username, userImage, localKeyPair.getPublicKey());
+
+                privateKey = localKeyPair.getPrivateKey();
+                publicKey = localKeyPair.getPublicKey();
+                Log.d("ZACH: ", "UE Private: " + privateKey);
+                Log.d("ZACH: ", "UE Public: " + publicKey);
+            } else{
+                Log.d("ZACH: ", "[" + username + "] USER DOES NOT EXIST");
+                // Key Pair does not exist for this username (User possibly edited username text field)
+
+                // Clear out Key Pair from Activities Preferences
+                getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPrivateKey,"").apply();
+                getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey,"").apply();
+
+                // Generate Key Pair and save it back to this Activities Preferences
+                myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
+                myCrypto.saveKeys(getPreferences(Context.MODE_PRIVATE));
+
+                // Grab the private key and public key that were generated
+                String newPrivateKey = getPreferences(Context.MODE_PRIVATE).getString(Crypto.prefPrivateKey,"");
+                String newPublicKey = getPreferences(Context.MODE_PRIVATE).getString(Crypto.prefPublicKey,"");
+
+                // Save them to our local Key Pair SQLite database
+                localKeyPair = new LocalKeyPair(username, newPublicKey, newPrivateKey);
+                localKeyPairDB.addKeyPair(localKeyPair);
+
+                // Register the new user
+                serverAPI.register(username, userImage, localKeyPair.getPublicKey());
+
+                privateKey = newPrivateKey;
+                publicKey = newPublicKey;
+                Log.d("ZACH: ", "UDNE Private: " + privateKey);
+                Log.d("ZACH: ", "UDNE Public: " + publicKey);
+            }
+
+            // Update Public and Private Key Field values
+            setPrivateKeyFieldValue(privateKey);
+            setPublicKeyFieldValue(publicKey);
         }
-
-        String username = ((EditText)findViewById(R.id.username)).getText().toString();
-        serverAPI.register(username, userImageSelected, lkp.getPublicKey());
     }
 
     public void doLogin(View view) {
-        serverAPI.setServerName(getServerName());
+        serverAPI.setServerName(getServerNameFieldValue());
 
-        serverAPI.login(getUserName(),myCrypto);
+        serverAPI.login(getUserNameFieldValue(),myCrypto);
     }
 
     public void doLogout(View view) {
-        serverAPI.setServerName(getServerName());
+        serverAPI.setServerName(getServerNameFieldValue());
 
-        serverAPI.logout(getUserName(),myCrypto);
+        serverAPI.logout(getUserNameFieldValue(),myCrypto);
     }
+
+    /************************** Image Selection Functions *****************************************/
 
     /**
      * Checks if the app has permission to write to device storage
-     *
      * If the app does not has permission then the user will be prompted to grant permissions
      *
      * @param activity
@@ -319,7 +415,11 @@ public class SettingsActivity extends AppCompatActivity {
                     Toast.makeText(this, "Image must be less than 512 x 512px!",
                             Toast.LENGTH_LONG).show();
                 } else{
-                    userImageSelected = encodeToBase64(bitmap, Bitmap.CompressFormat.PNG, 100);
+                    String userImageSelected = encodeToBase64(bitmap, Bitmap.CompressFormat.PNG, 100);
+
+                    // Save encode image to this Activities preferences
+                    getPreferences(Context.MODE_PRIVATE).edit().putString("userImage",userImageSelected).apply();
+
                     // Set the Image in ImageView after decoding the String
                     imgView.setImageBitmap(bitmap);
                 }
@@ -334,6 +434,9 @@ public class SettingsActivity extends AppCompatActivity {
 
     }
 
+    /************************** Bitmap (Encoding & Decoding) **************************************/
+
+    // Encode a bitmap to a String
     public static String encodeToBase64(Bitmap image, Bitmap.CompressFormat compressFormat, int quality)
     {
         ByteArrayOutputStream byteArrayOS = new ByteArrayOutputStream();
@@ -341,9 +444,67 @@ public class SettingsActivity extends AppCompatActivity {
         return Base64.encodeToString(byteArrayOS.toByteArray(), Base64.DEFAULT);
     }
 
+    // Decode a string into a bitmap
     public static Bitmap decodeBase64(String input)
     {
         byte[] decodedBytes = Base64.decode(input, 0);
         return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
+    }
+
+    /************************** Activity Fields (Getters & Setters) *******************************/
+
+    private String getUserNameFieldValue(){
+        EditText usernameField = ((EditText)findViewById(R.id.username));
+        if(usernameField != null) {
+            return usernameField.getText().toString();
+        } else{
+            return null;
+        }
+    }
+
+    private void setUserNameFieldValue(String value){
+        EditText usernameField = ((EditText)findViewById(R.id.username));
+        if(usernameField != null) {
+            usernameField.setText(value);
+        }
+    }
+
+    private String getServerNameFieldValue(){
+        EditText serverNameField = ((EditText)findViewById(R.id.servername));
+        if(serverNameField != null) {
+            return serverNameField.getText().toString();
+        } else{
+            return null;
+        }
+    }
+
+    private void setServerNameFieldValue(String value){
+        EditText serverNameField = ((EditText)findViewById(R.id.servername));
+        if(serverNameField != null) {
+            serverNameField.setText(value);
+        }
+    }
+
+    private void setPrivateKeyFieldValue(String value){
+        TextView privateKeyField = ((TextView)findViewById(R.id.userPrivateKey));
+        if(privateKeyField != null) {
+            privateKeyField.setText(value);
+        }
+    }
+
+    private void setPublicKeyFieldValue(String value){
+        TextView publicKeyField = ((TextView)findViewById(R.id.userPublicKey));
+        if(publicKeyField != null) {
+            publicKeyField.setText(value);
+        }
+    }
+
+    private void setUserImageFieldValue(String value){
+        // value must be encoded bitmap string
+        ImageView userImageField = ((ImageView)findViewById(R.id.userImage));
+        if(userImageField != null) {
+            userImageField.setBackgroundResource(0);
+            userImageField.setImageBitmap(decodeBase64(value));
+        }
     }
 }
