@@ -12,13 +12,14 @@ import java.util.List;
 
 public class ContactDBHandler extends SQLiteOpenHelper{
     // Database Version
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
     // Database Name
     private static final String DATABASE_NAME = "reactiveAppContacts";
     // Table name
     private static final String TABLE_CONTACTS = "contacts";
     // Table Columns names
     private static final String KEY_ID = "id";
+    private static final String KEY_LOCAL_KEY_PAIR_ID = "local_key_pair_id";
     private static final String KEY_USERNAME = "username";
     private static final String KEY_USER_IMAGE = "user_image";
     private static final String KEY_PUBLIC_KEY = "public_key";
@@ -30,7 +31,7 @@ public class ContactDBHandler extends SQLiteOpenHelper{
     @Override
     public void onCreate(SQLiteDatabase db) {
         String CREATE_CONTACTS_TABLE = "CREATE TABLE " + TABLE_CONTACTS + "("
-                + KEY_ID + " INTEGER PRIMARY KEY," + KEY_USERNAME + " TEXT,"
+                + KEY_ID + " INTEGER PRIMARY KEY," + KEY_LOCAL_KEY_PAIR_ID + " INTEGER," + KEY_USERNAME + " TEXT,"
                 + KEY_USER_IMAGE + " TEXT," + KEY_PUBLIC_KEY + " TEXT" + ")";
         db.execSQL(CREATE_CONTACTS_TABLE);
     }
@@ -46,6 +47,7 @@ public class ContactDBHandler extends SQLiteOpenHelper{
     public int addContact(Contact contact) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
+        values.put(KEY_LOCAL_KEY_PAIR_ID, contact.getLocalKeyPairId());
         values.put(KEY_USERNAME, contact.getUsername());
         values.put(KEY_USER_IMAGE, contact.getUserImage());
         values.put(KEY_PUBLIC_KEY, contact.getPublicKey());
@@ -60,8 +62,8 @@ public class ContactDBHandler extends SQLiteOpenHelper{
     public Contact getContact(int id) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(TABLE_CONTACTS, new String[] { KEY_ID,
-                        KEY_USERNAME, KEY_USER_IMAGE, KEY_PUBLIC_KEY},
-                KEY_ID + "=?", new String[] { String.valueOf(id) }, null, null, null);
+                        KEY_LOCAL_KEY_PAIR_ID, KEY_USERNAME, KEY_USER_IMAGE, KEY_PUBLIC_KEY},
+                KEY_ID + "=?", new String[] { String.valueOf(id) },  null, null, null);
         if (cursor != null)
             cursor.moveToFirst();
 
@@ -69,7 +71,8 @@ public class ContactDBHandler extends SQLiteOpenHelper{
 
         if(null != cursor && cursor.getCount() > 0) {
             contact = new Contact(Integer.parseInt(cursor.getString(0)),
-                    cursor.getString(1), cursor.getString(2), cursor.getString(3));
+                    Integer.parseInt(cursor.getString(1)), cursor.getString(2),
+                    cursor.getString(3), cursor.getString(4));
 
             cursor.close();
         }
@@ -89,14 +92,17 @@ public class ContactDBHandler extends SQLiteOpenHelper{
         // looping through all rows and adding to list
         if (cursor.moveToFirst()) {
             contact.setId(Integer.parseInt(cursor.getString(0)));
-            contact.setUsername(cursor.getString(1));
-            contact.setUserImage(cursor.getString(2));
-            contact.setPublicKey(cursor.getString(3));
+            contact.setLocalKeyPairId(Integer.parseInt(cursor.getString(1)));
+            contact.setUsername(cursor.getString(2));
+            contact.setUserImage(cursor.getString(3));
+            contact.setPublicKey(cursor.getString(4));
+
+            cursor.close();
+            db.close(); // Closing database connection
+            return contact;
         }
 
-        cursor.close();
-        db.close(); // Closing database connection
-        return contact;
+        return null;
     }
 
     // Getting All Contacts
@@ -111,9 +117,39 @@ public class ContactDBHandler extends SQLiteOpenHelper{
             do {
                 Contact contact = new Contact();
                 contact.setId(Integer.parseInt(cursor.getString(0)));
-                contact.setUsername(cursor.getString(1));
-                contact.setUserImage(cursor.getString(2));
-                contact.setPublicKey(cursor.getString(3));
+                contact.setLocalKeyPairId(Integer.parseInt(cursor.getString(1)));
+                contact.setUsername(cursor.getString(2));
+                contact.setUserImage(cursor.getString(3));
+                contact.setPublicKey(cursor.getString(4));
+
+                // Adding contact to list
+                contactList.add(contact);
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+        db.close(); // Closing database connection
+
+        // return contact list
+        return contactList;
+    }
+
+    // Getting Contacts associated with localKeyPairId
+    public List<Contact> getContacts(int localKeyPairId) {
+        List<Contact> contactList = new ArrayList<>();
+        // Select All Query
+        String selectQuery = "SELECT * FROM " + TABLE_CONTACTS + " WHERE " + KEY_LOCAL_KEY_PAIR_ID + "=" +localKeyPairId+"";
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        // looping through all rows and adding to list
+        if (cursor.moveToFirst()) {
+            do {
+                Contact contact = new Contact();
+                contact.setId(Integer.parseInt(cursor.getString(0)));
+                contact.setLocalKeyPairId(Integer.parseInt(cursor.getString(1)));
+                contact.setUsername(cursor.getString(2));
+                contact.setUserImage(cursor.getString(3));
+                contact.setPublicKey(cursor.getString(4));
 
                 // Adding contact to list
                 contactList.add(contact);
@@ -145,6 +181,7 @@ public class ContactDBHandler extends SQLiteOpenHelper{
     public int updateContact(Contact contact) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
+        values.put(KEY_LOCAL_KEY_PAIR_ID, contact.getLocalKeyPairId());
         values.put(KEY_USERNAME, contact.getUsername());
         values.put(KEY_USER_IMAGE, contact.getUserImage());
         values.put(KEY_PUBLIC_KEY, contact.getPublicKey());

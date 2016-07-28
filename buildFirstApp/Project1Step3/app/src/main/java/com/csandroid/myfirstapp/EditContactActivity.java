@@ -1,9 +1,12 @@
 package com.csandroid.myfirstapp;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
@@ -14,6 +17,8 @@ import android.widget.Toast;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 import com.squareup.picasso.Picasso;
+
+import java.io.ByteArrayOutputStream;
 
 public class EditContactActivity extends AppCompatActivity {
 
@@ -63,10 +68,10 @@ public class EditContactActivity extends AppCompatActivity {
 
         Contact contact = db.getContact(this.contactId);
 
-        if(null != username && null != publicKey) {
+        if(null != username && null != publicKey && null != userImage) {
             username.setText(contact.getUsername());
             publicKey.setText(contact.getPublicKey());
-            Picasso.with(this).load(contact.getUserImage()).into(userImage);
+            setUserImageFieldValue(contact.getUserImage());
         }
     }
 
@@ -87,6 +92,34 @@ public class EditContactActivity extends AppCompatActivity {
                     startActivity(contactsIntent);
                 }
             });
+        }
+    }
+
+    /************************** Bitmap (Encoding & Decoding) **************************************/
+
+    // Encode a bitmap to a String
+    public static String encodeToBase64(Bitmap image, Bitmap.CompressFormat compressFormat, int quality)
+    {
+        ByteArrayOutputStream byteArrayOS = new ByteArrayOutputStream();
+        image.compress(compressFormat, quality, byteArrayOS);
+        return Base64.encodeToString(byteArrayOS.toByteArray(), Base64.DEFAULT);
+    }
+
+    // Decode a string into a bitmap
+    public static Bitmap decodeBase64(String input)
+    {
+        byte[] decodedBytes = Base64.decode(input, 0);
+        return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
+    }
+
+    /************************** Activity Fields (Getters & Setters) *******************************/
+
+    private void setUserImageFieldValue(String value){
+        // value must be encoded bitmap string
+        ImageView userImageField = ((ImageView)findViewById(R.id.userImage));
+        if(userImageField != null) {
+            userImageField.setBackgroundResource(0);
+            userImageField.setImageBitmap(decodeBase64(value));
         }
     }
 }

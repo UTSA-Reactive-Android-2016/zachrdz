@@ -53,6 +53,7 @@ public class SettingsActivity extends AppCompatActivity {
             Manifest.permission.WRITE_EXTERNAL_STORAGE
     };
 
+    private static final String serverPort = "25666";
     HashMap<String,ServerAPI.UserInfo> myUserMap = new HashMap<>();
 
     @Override
@@ -244,7 +245,7 @@ public class SettingsActivity extends AppCompatActivity {
         serverAPI = ServerAPI.getInstance(this.getApplicationContext(), myCrypto);
 
         serverAPI.setServerName(getServerNameFieldValue());
-        serverAPI.setServerPort("25666");
+        serverAPI.setServerPort(this.serverPort);
 
         serverAPI.registerListener(new ServerAPI.Listener() {
             @Override
@@ -360,6 +361,8 @@ public class SettingsActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putBoolean("loggedIn", getPreferences(Context.MODE_PRIVATE).getBoolean("loggedIn",false));
         editor.putString("username", getPreferences(Context.MODE_PRIVATE).getString("username",""));
+        editor.putString("serverName", getServerNameFieldValue());
+        editor.putString("serverPort", this.serverPort);
         editor.apply();
     }
 
@@ -537,7 +540,7 @@ public class SettingsActivity extends AppCompatActivity {
         if(usernameField != null) {
             return usernameField.getText().toString();
         } else{
-            return null;
+            return "";
         }
     }
 
@@ -553,7 +556,7 @@ public class SettingsActivity extends AppCompatActivity {
         if(serverNameField != null) {
             return serverNameField.getText().toString();
         } else{
-            return null;
+            return "";
         }
     }
 

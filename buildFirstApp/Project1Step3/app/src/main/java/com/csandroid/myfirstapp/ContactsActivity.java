@@ -1,7 +1,9 @@
 package com.csandroid.myfirstapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -11,13 +13,17 @@ import android.view.MenuItem;
 
 import com.csandroid.myfirstapp.adapters.ContactAdapter;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
+import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
+import com.csandroid.myfirstapp.models.LocalKeyPair;
 
 import java.util.List;
 
 public class ContactsActivity extends AppCompatActivity {
 
     private RecyclerView recList;
+    LocalKeyPairDBHandler localKeyPairDB;
+    LocalKeyPair localKeyPair;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +34,13 @@ public class ContactsActivity extends AppCompatActivity {
         if(null != getSupportActionBar()){
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
+
+        // Logged in User
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String username = prefs.getString("username","");
+
+        localKeyPairDB = new LocalKeyPairDBHandler(this);
+        localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
 
         this.setupRecyclerView();
     }
@@ -73,7 +86,7 @@ public class ContactsActivity extends AppCompatActivity {
 
     private List<Contact> createList() {
         ContactDBHandler db = new ContactDBHandler(this);
-        return db.getAllContacts();
+        return db.getContacts(localKeyPair.getId());
     }
 
     private void setupRecyclerView(){

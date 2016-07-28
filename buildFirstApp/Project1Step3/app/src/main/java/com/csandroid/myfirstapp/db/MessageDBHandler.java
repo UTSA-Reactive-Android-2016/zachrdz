@@ -12,13 +12,14 @@ import java.util.List;
 
 public class MessageDBHandler extends SQLiteOpenHelper{
     // Database Version
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
     // Database Name
     private static final String DATABASE_NAME = "reactiveAppMessages";
     // Table name
     private static final String TABLE_MESSAGES = "messages";
     // Table Columns names
     private static final String KEY_ID = "id";
+    private static final String KEY_LOCAL_KEY_PAIR_ID = "local_key_pair_id";
     private static final String KEY_SENDER_USERNAME = "sender_username";
     private static final String KEY_SUBJECT = "subject";
     private static final String KEY_MESSAGE_BODY = "message_body";
@@ -32,7 +33,8 @@ public class MessageDBHandler extends SQLiteOpenHelper{
     @Override
     public void onCreate(SQLiteDatabase db) {
         String CREATE_MESSAGES_TABLE = "CREATE TABLE " + TABLE_MESSAGES + "("
-                + KEY_ID + " INTEGER PRIMARY KEY," + KEY_SENDER_USERNAME + " TEXT,"
+                + KEY_ID + " INTEGER PRIMARY KEY," + KEY_LOCAL_KEY_PAIR_ID + " INTEGER,"
+                + KEY_SENDER_USERNAME + " TEXT,"
                 + KEY_SUBJECT + " TEXT," + KEY_MESSAGE_BODY + " TEXT,"
                 + KEY_CREATED_AT + " INTEGER," + KEY_TTL + " INTEGER" + ")";
         db.execSQL(CREATE_MESSAGES_TABLE);
@@ -49,6 +51,7 @@ public class MessageDBHandler extends SQLiteOpenHelper{
     public int addMessage(Message message) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
+        values.put(KEY_LOCAL_KEY_PAIR_ID, message.getLocalKeyPairId());
         values.put(KEY_SENDER_USERNAME, message.getSenderUsername());
         values.put(KEY_SUBJECT, message.getSubject());
         values.put(KEY_MESSAGE_BODY, message.getMessageBody());
@@ -65,7 +68,7 @@ public class MessageDBHandler extends SQLiteOpenHelper{
     // Getting one message
     public Message getMessage(int id) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.query(TABLE_MESSAGES, new String[] { KEY_ID,
+        Cursor cursor = db.query(TABLE_MESSAGES, new String[] { KEY_ID, KEY_LOCAL_KEY_PAIR_ID,
                         KEY_SENDER_USERNAME, KEY_SUBJECT, KEY_MESSAGE_BODY, KEY_CREATED_AT, KEY_TTL },
                         KEY_ID + "=?", new String[] { String.valueOf(id) }, null, null, null, null);
 
@@ -73,9 +76,10 @@ public class MessageDBHandler extends SQLiteOpenHelper{
         if (cursor != null && cursor.getCount() > 0) {
             cursor.moveToFirst();
             message = new Message(Integer.parseInt(cursor.getString(0)),
-                    cursor.getString(1), cursor.getString(2), cursor.getString(3),
-                    Integer.parseInt(cursor.getString(4)),
-                    Integer.parseInt(cursor.getString(5)));
+                    Integer.parseInt(cursor.getString(1)),
+                    cursor.getString(2), cursor.getString(3), cursor.getString(4),
+                    Integer.parseInt(cursor.getString(5)),
+                    Integer.parseInt(cursor.getString(6)));
 
             cursor.close();
         }
@@ -98,11 +102,41 @@ public class MessageDBHandler extends SQLiteOpenHelper{
             do {
                 Message message = new Message();
                 message.setId(Integer.parseInt(cursor.getString(0)));
-                message.setSenderUsername(cursor.getString(1));
-                message.setSubject(cursor.getString(2));
-                message.setMessageBody(cursor.getString(3));
-                message.setCreatedAt(Integer.parseInt(cursor.getString(4)));
-                message.setTTL(Integer.parseInt(cursor.getString(5)));
+                message.setLocalKeyPairId(Integer.parseInt(cursor.getString(1)));
+                message.setSenderUsername(cursor.getString(2));
+                message.setSubject(cursor.getString(3));
+                message.setMessageBody(cursor.getString(4));
+                message.setCreatedAt(Integer.parseInt(cursor.getString(5)));
+                message.setTTL(Integer.parseInt(cursor.getString(6)));
+                // Adding message to list
+                messageList.add(message);
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        db.close(); // Closing database connection
+
+        // return message list
+        return messageList;
+    }
+
+    // Getting Messages associated with localKeyPairId
+    public List<Message> getMessages(int localKeyPairId) {
+        List<Message> messageList = new ArrayList<>();
+        // Select All Query
+        String selectQuery = "SELECT * FROM " + TABLE_MESSAGES + " WHERE " + KEY_LOCAL_KEY_PAIR_ID + "=" +localKeyPairId+"";
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        // looping through all rows and adding to list
+        if (cursor.moveToFirst()) {
+            do {
+                Message message = new Message();
+                message.setId(Integer.parseInt(cursor.getString(0)));
+                message.setLocalKeyPairId(Integer.parseInt(cursor.getString(1)));
+                message.setSenderUsername(cursor.getString(2));
+                message.setSubject(cursor.getString(3));
+                message.setMessageBody(cursor.getString(4));
+                message.setCreatedAt(Integer.parseInt(cursor.getString(5)));
+                message.setTTL(Integer.parseInt(cursor.getString(6)));
                 // Adding message to list
                 messageList.add(message);
             } while (cursor.moveToNext());
@@ -132,6 +166,7 @@ public class MessageDBHandler extends SQLiteOpenHelper{
     public int updateMessage(Message message) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
+        values.put(KEY_LOCAL_KEY_PAIR_ID, message.getLocalKeyPairId());
         values.put(KEY_SENDER_USERNAME, message.getSenderUsername());
         values.put(KEY_SUBJECT, message.getSubject());
         values.put(KEY_MESSAGE_BODY, message.getMessageBody());

@@ -174,11 +174,11 @@ public class MainActivity extends AppCompatActivity {
         ContactDBHandler dbContact = new ContactDBHandler(this);
         List<Message> messageList = new ArrayList<>();
 
-        Message m1 = new Message("johndoe", "Really Important, read immediately!",
+        Message m1 = new Message(0, "johndoe", "Really Important, read immediately!",
                 "This is a super important, secret message!", 5);
-        Message m2 = new Message("mikejones", "Hows it going?",
+        Message m2 = new Message(0, "mikejones", "Hows it going?",
                 "Just wanted to see what you were up to...", 15);
-        Message m3 = new Message("stacyp", "Let me know if you get this.",
+        Message m3 = new Message(0, "stacyp", "Let me know if you get this.",
                 "This is my message with stuff...", 300);
 
         // Generate 3 fake messages, make sure contact exists before generation.
@@ -214,9 +214,9 @@ public class MainActivity extends AppCompatActivity {
         KeyPair kp2 = encryptHelper.generateKeyPair();
         KeyPair kp3 = encryptHelper.generateKeyPair();
 
-        Contact c1 = new Contact("johndoe", "http://i.imgur.com/0kKrYvV.jpg", encryptHelper.getPublicKeyString(kp1));
-        Contact c2 = new Contact("mikejones", "http://i.imgur.com/lO1cnUP.jpg?1", encryptHelper.getPublicKeyString(kp2));
-        Contact c3 = new Contact("stacyp", "https://i.imgur.com/Cs9IoHk.jpg", encryptHelper.getPublicKeyString(kp3));
+        Contact c1 = new Contact(0, "johndoe", "http://i.imgur.com/0kKrYvV.jpg", encryptHelper.getPublicKeyString(kp1));
+        Contact c2 = new Contact(0, "mikejones", "http://i.imgur.com/lO1cnUP.jpg?1", encryptHelper.getPublicKeyString(kp2));
+        Contact c3 = new Contact(0, "stacyp", "https://i.imgur.com/Cs9IoHk.jpg", encryptHelper.getPublicKeyString(kp3));
         List<Contact> contactList = new ArrayList<>();
 
         // Add contacts to db

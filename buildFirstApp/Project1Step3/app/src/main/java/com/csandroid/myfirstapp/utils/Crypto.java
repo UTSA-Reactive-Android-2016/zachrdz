@@ -256,4 +256,9 @@ public class Crypto {
         return null;
     }
 
+    // Zach Rodriguez: Added this in because it was needed as a utility function
+    public static String getPublicKeyString(PublicKey publicKey){
+        return Base64.encodeToString(publicKey.getEncoded(),Base64.DEFAULT);
+    }
+
 }

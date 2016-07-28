@@ -2,6 +2,7 @@ package com.csandroid.myfirstapp.models;
 
 public class Message {
     private int id;
+    private int localKeyPairId;
     private String senderUsername;
     private String subject;
     private String messageBody;
@@ -12,8 +13,9 @@ public class Message {
 
     }
 
-    public Message(int id, String username, String subject, String body, int createdAt, int TTL){
+    public Message(int id, int localKeyPairId, String username, String subject, String body, int createdAt, int TTL){
         this.id = id;
+        this.localKeyPairId = localKeyPairId;
         this.senderUsername = username;
         this.subject = subject;
         this.messageBody = body;
@@ -21,11 +23,20 @@ public class Message {
         this.TTL = TTL;
     }
 
-    public Message(String username, String subject, String body, int TTL){
+    public Message(int localKeyPairId, String username,  String subject, String body, int TTL){
+        this.localKeyPairId = localKeyPairId;
         this.senderUsername = username;
         this.subject = subject;
         this.messageBody = body;
         this.TTL = TTL;
+    }
+
+    public int getLocalKeyPairId() {
+        return localKeyPairId;
+    }
+
+    public void setLocalKeyPairId(int localKeyPairId) {
+        this.localKeyPairId = localKeyPairId;
     }
 
     public int getTTL() {

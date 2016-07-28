@@ -2,6 +2,7 @@ package com.csandroid.myfirstapp.models;
 
 public class Contact {
     private int id;
+    private int localKeyPairId;
     private String username;
     private String userImage;
     private String publicKey;
@@ -10,19 +11,28 @@ public class Contact {
 
     }
 
-    public Contact(int id, String username, String userImage, String publicKey){
+    public Contact(int id, int localKeyPairId, String username, String userImage, String publicKey){
         this.id = id;
+        this.localKeyPairId = localKeyPairId;
         this.username = username;
         this.userImage = userImage;
         this.publicKey = publicKey;
     }
 
-    public Contact(String username, String userImage, String publicKey){
+    public Contact(int localKeyPairId, String username, String userImage, String publicKey){
+        this.localKeyPairId = localKeyPairId;
         this.username = username;
         this.userImage = userImage;
         this.publicKey = publicKey;
     }
 
+    public int getLocalKeyPairId() {
+        return localKeyPairId;
+    }
+
+    public void setLocalKeyPairId(int localKeyPairId) {
+        this.localKeyPairId = localKeyPairId;
+    }
 
     public String getPublicKey() {
         return publicKey;

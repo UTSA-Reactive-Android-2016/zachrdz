@@ -2,8 +2,11 @@ package com.csandroid.myfirstapp.adapters;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
+import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +20,7 @@ import com.csandroid.myfirstapp.ext.CircleTransform;
 import com.csandroid.myfirstapp.models.Contact;
 import com.squareup.picasso.Picasso;
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactViewHolder>{
@@ -37,7 +41,7 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
     public void onBindViewHolder(ContactViewHolder contactViewHolder, int i) {
         final Contact contact = contactList.get(i);
         contactViewHolder.vUsername.setText(contact.getUsername());
-        Picasso.with(contactViewHolder.view.getContext()).load(contact.getUserImage()).transform(new CircleTransform()).into(contactViewHolder.vUserImage);
+        contactViewHolder.vUserImage.setImageBitmap(decodeBase64(contact.getUserImage()));
         this.initOnClickListeners(contactViewHolder, contact);
     }
 
@@ -104,6 +108,23 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
                 context.startActivity(intent);
             }
         });
+    }
+
+    /************************** Bitmap (Encoding & Decoding) **************************************/
+
+    // Encode a bitmap to a String
+    public static String encodeToBase64(Bitmap image, Bitmap.CompressFormat compressFormat, int quality)
+    {
+        ByteArrayOutputStream byteArrayOS = new ByteArrayOutputStream();
+        image.compress(compressFormat, quality, byteArrayOS);
+        return Base64.encodeToString(byteArrayOS.toByteArray(), Base64.DEFAULT);
+    }
+
+    // Decode a string into a bitmap
+    public static Bitmap decodeBase64(String input)
+    {
+        byte[] decodedBytes = Base64.decode(input, 0);
+        return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
     }
 
 }
