@@ -42,6 +42,7 @@ public class SettingsActivity extends AppCompatActivity {
     ServerAPI serverAPI;
     LocalKeyPairDBHandler localKeyPairDB;
     Crypto myCrypto;
+    ServerAPI.Listener serverAPIListener;
 
     private Menu settingsMenu;
 
@@ -247,7 +248,11 @@ public class SettingsActivity extends AppCompatActivity {
         serverAPI.setServerName(getServerNameFieldValue());
         serverAPI.setServerPort(this.serverPort);
 
-        serverAPI.registerListener(new ServerAPI.Listener() {
+        this.registerServerAPIListener();
+    }
+
+    private void registerServerAPIListener(){
+        serverAPI.registerListener(serverAPIListener = new ServerAPI.Listener() {
             @Override
             public void onCommandFailed(String commandName, VolleyError volleyError) {
                 Toast.makeText(SettingsActivity.this,String.format("command %s failed!",commandName),
@@ -324,6 +329,10 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
+    private void unregisterServerAPIListener(){
+        serverAPI.unregisterListener(serverAPIListener);
+    }
+
     /*
      *  Make sure to save off fields to preferences before closed or interupted
      */
@@ -350,6 +359,16 @@ public class SettingsActivity extends AppCompatActivity {
         editor.putString("serverName", getServerNameFieldValue());
         editor.putString("serverPort", this.serverPort);
         editor.apply();
+
+        // Remove server listener
+        unregisterServerAPIListener();
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+
+        registerServerAPIListener();
     }
 
     /************************** Action Functions **************************************************/

@@ -34,11 +34,13 @@ public class ContactsActivity extends AppCompatActivity {
     LocalKeyPairDBHandler localKeyPairDB;
     LocalKeyPair localKeyPair;
     List<Contact> contactsList;
+    ServerAPI.Listener serverAPIListener;
 
     ServerAPI serverAPI;
     Crypto myCrypto;
     HashMap<String,ServerAPI.UserInfo> myUserMap = new HashMap<>();
-    private final static int INTERVAL = 1000 * 3; // 3 seconds
+    private final static int mInterval = 1000 * 3; // 3 seconds
+    private Handler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +97,15 @@ public class ContactsActivity extends AppCompatActivity {
         recList.invalidate();
 
         doRegisterContacts();
+        registerServerAPIListener();
+        startRepeatingTask();
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        unregisterServerAPIListener();
+        stopRepeatingTask();
     }
 
     public void initServerAPI(){
@@ -114,7 +125,11 @@ public class ContactsActivity extends AppCompatActivity {
         serverAPI.setServerName(hostName);
         serverAPI.setServerPort(portNumber);
 
-        serverAPI.registerListener(new ServerAPI.Listener() {
+        this.registerServerAPIListener();
+    }
+
+    private void registerServerAPIListener(){
+        serverAPI.registerListener(serverAPIListener = new ServerAPI.Listener() {
             @Override
             public void onCommandFailed(String commandName, VolleyError volleyError) {
                 Toast.makeText(ContactsActivity.this,String.format("command %s failed!",commandName),
@@ -199,14 +214,34 @@ public class ContactsActivity extends AppCompatActivity {
         });
     }
 
+    private void unregisterServerAPIListener(){
+        serverAPI.unregisterListener(serverAPIListener);
+    }
+
     public void initContactStatusPoll(){
-        final Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            public void run() {
+        mHandler = new Handler();
+        startRepeatingTask();
+    }
+
+    Runnable mStatusChecker = new Runnable() {
+        @Override
+        public void run() {
+            try {
                 doRegisterContacts();
-                handler.postDelayed(this, 3000); //now is every 3 seconds
+            } finally {
+                // 100% guarantee that this always happens, even if
+                // your update method throws an exception
+                mHandler.postDelayed(mStatusChecker, mInterval);
             }
-        }, 3000); //Every 3000 ms (3 seconds)
+        }
+    };
+
+    void startRepeatingTask() {
+        mStatusChecker.run();
+    }
+
+    void stopRepeatingTask() {
+        mHandler.removeCallbacks(mStatusChecker);
     }
 
     public void doRegisterContacts(){

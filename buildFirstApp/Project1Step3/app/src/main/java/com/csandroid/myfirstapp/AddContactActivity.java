@@ -37,7 +37,7 @@ public class AddContactActivity extends AppCompatActivity {
     LocalKeyPair localKeyPair;
     Crypto myCrypto;
     HashMap<String,ServerAPI.UserInfo> myUserMap = new HashMap<>();
-
+    ServerAPI.Listener serverAPIListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -145,7 +145,11 @@ public class AddContactActivity extends AppCompatActivity {
         serverAPI.setServerName(hostName);
         serverAPI.setServerPort(portNumber);
 
-        serverAPI.registerListener(new ServerAPI.Listener() {
+        this.registerServerAPIListener();
+    }
+
+    private void registerServerAPIListener(){
+        serverAPI.registerListener(serverAPIListener = new ServerAPI.Listener() {
             @Override
             public void onCommandFailed(String commandName, VolleyError volleyError) {
                 Toast.makeText(AddContactActivity.this,String.format("command %s failed!",commandName),
@@ -206,6 +210,22 @@ public class AddContactActivity extends AppCompatActivity {
             @Override
             public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {}
         });
+    }
+
+    private void unregisterServerAPIListener(){
+        serverAPI.unregisterListener(serverAPIListener);
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        registerServerAPIListener();
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        serverAPI.unregisterListener(serverAPIListener);
     }
 
     /************************** Bitmap (Encoding & Decoding) **************************************/
