@@ -1,8 +1,10 @@
 package com.csandroid.myfirstapp;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -10,13 +12,20 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Toast;
 
+import com.android.volley.VolleyError;
 import com.csandroid.myfirstapp.adapters.ContactAdapter;
+import com.csandroid.myfirstapp.api.core.ServerAPI;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
+import com.csandroid.myfirstapp.utils.Crypto;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class ContactsActivity extends AppCompatActivity {
@@ -24,6 +33,12 @@ public class ContactsActivity extends AppCompatActivity {
     private RecyclerView recList;
     LocalKeyPairDBHandler localKeyPairDB;
     LocalKeyPair localKeyPair;
+    List<Contact> contactsList;
+
+    ServerAPI serverAPI;
+    Crypto myCrypto;
+    HashMap<String,ServerAPI.UserInfo> myUserMap = new HashMap<>();
+    private final static int INTERVAL = 1000 * 3; // 3 seconds
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,14 +50,10 @@ public class ContactsActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        // Logged in User
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String username = prefs.getString("username","");
-
-        localKeyPairDB = new LocalKeyPairDBHandler(this);
-        localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
-
+        this.initServerAPI();
         this.setupRecyclerView();
+
+        this.initContactStatusPoll();
     }
 
     // Menu icons are inflated just as they were with actionbar
@@ -82,11 +93,138 @@ public class ContactsActivity extends AppCompatActivity {
         ContactAdapter ca = new ContactAdapter(createList());
         recList.setAdapter(ca);
         recList.invalidate();
+
+        doRegisterContacts();
+    }
+
+    public void initServerAPI(){
+        // Logged in User setup for serverAPI
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String username = prefs.getString("username","");
+        String hostName = prefs.getString("serverName", "");
+        String portNumber = prefs.getString("serverPort", "");
+
+        localKeyPairDB = new LocalKeyPairDBHandler(this);
+        localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
+        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPrivateKey,localKeyPair.getPrivateKey()).apply();
+        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey,localKeyPair.getPublicKey()).apply();
+
+        myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
+        serverAPI = ServerAPI.getInstance(this.getApplicationContext(), myCrypto);
+        serverAPI.setServerName(hostName);
+        serverAPI.setServerPort(portNumber);
+
+        serverAPI.registerListener(new ServerAPI.Listener() {
+            @Override
+            public void onCommandFailed(String commandName, VolleyError volleyError) {
+                Toast.makeText(ContactsActivity.this,String.format("command %s failed!",commandName),
+                        Toast.LENGTH_SHORT).show();
+                volleyError.printStackTrace();
+            }
+
+            @Override
+            public void onGoodAPIVersion() {}
+
+            @Override
+            public void onBadAPIVersion() {}
+
+            @Override
+            public void onRegistrationSucceeded() {}
+
+            @Override
+            public void onRegistrationFailed(String reason) {}
+
+            @Override
+            public void onLoginSucceeded() {}
+
+            @Override
+            public void onLoginFailed(String reason) {}
+
+            @Override
+            public void onLogoutSucceeded() { }
+
+            @Override
+            public void onLogoutFailed(String reason) {}
+
+            @Override
+            public void onUserInfo(ServerAPI.UserInfo info) {}
+
+            @Override
+            public void onUserNotFound(String username) {}
+
+            @Override
+            public void onContactLogin(String username) {
+                int i = 0;
+                for (Contact contact:contactsList) {
+                    if(contact.getUsername().equals(username)){
+                        View v = recList.getLayoutManager().findViewByPosition(i);
+
+                        // Toggle online status here
+                        if(null != v) {
+                            v.findViewById(R.id.online).setVisibility(View.VISIBLE);
+                            v.findViewById(R.id.offline).setVisibility(View.GONE);
+                        }
+                        break;
+                    }
+                    i++;
+                }
+            }
+
+            @Override
+            public void onContactLogout(String username) {
+                int i = 0;
+                for (Contact contact:contactsList) {
+                    if(contact.getUsername().equals(username)){
+                        View v = recList.getLayoutManager().findViewByPosition(i);
+
+                        if(null != v) {
+                            // Toggle online status here
+                            v.findViewById(R.id.online).setVisibility(View.GONE);
+                            v.findViewById(R.id.offline).setVisibility(View.VISIBLE);
+                        }
+                        break;
+                    }
+                    i++;
+                }
+            }
+
+            @Override
+            public void onSendMessageSucceeded(Object key) {}
+
+            @Override
+            public void onSendMessageFailed(Object key, String reason) {}
+
+            @Override
+            public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {}
+        });
+    }
+
+    public void initContactStatusPoll(){
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            public void run() {
+                doRegisterContacts();
+                handler.postDelayed(this, 3000); //now is every 3 seconds
+            }
+        }, 3000); //Every 3000 ms (3 seconds)
+    }
+
+    public void doRegisterContacts(){
+        ArrayList<String> contacts = new ArrayList<>();
+        for(Contact contact:contactsList){
+            contacts.add(contact.getUsername());
+        }
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String username = prefs.getString("username","");
+
+        serverAPI.registerContacts(username,contacts);
     }
 
     private List<Contact> createList() {
         ContactDBHandler db = new ContactDBHandler(this);
-        return db.getContacts(localKeyPair.getId());
+        contactsList = db.getContacts(localKeyPair.getId());
+        return contactsList;
     }
 
     private void setupRecyclerView(){

@@ -256,14 +256,10 @@ public class SettingsActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onGoodAPIVersion() {
-                //Toast.makeText(SettingsActivity.this,"API Version Matched!", Toast.LENGTH_SHORT).show();
-            }
+            public void onGoodAPIVersion() {}
 
             @Override
-            public void onBadAPIVersion() {
-                Toast.makeText(SettingsActivity.this,"API Version Mismatch!", Toast.LENGTH_SHORT).show();
-            }
+            public void onBadAPIVersion() {}
 
             @Override
             public void onRegistrationSucceeded() {
@@ -312,29 +308,19 @@ public class SettingsActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onContactLogin(String username) {
-                Toast.makeText(SettingsActivity.this,String.format("user %s logged in",username),Toast.LENGTH_SHORT).show();
-            }
+            public void onContactLogin(String username) {}
 
             @Override
-            public void onContactLogout(String username) {
-                Toast.makeText(SettingsActivity.this,String.format("user %s logged out",username),Toast.LENGTH_SHORT).show();
-            }
+            public void onContactLogout(String username) {}
 
             @Override
-            public void onSendMessageSucceeded(Object key) {
-                Toast.makeText(SettingsActivity.this,String.format("sent a message"),Toast.LENGTH_SHORT).show();
-            }
+            public void onSendMessageSucceeded(Object key) {}
 
             @Override
-            public void onSendMessageFailed(Object key, String reason) {
-                Toast.makeText(SettingsActivity.this,String.format("failed to send a message"),Toast.LENGTH_SHORT).show();
-            }
+            public void onSendMessageFailed(Object key, String reason) {}
 
             @Override
-            public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {
-                Toast.makeText(SettingsActivity.this,String.format("got message from %s",sender),Toast.LENGTH_SHORT).show();
-            }
+            public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {}
         });
     }
 

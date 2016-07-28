@@ -26,11 +26,8 @@ import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.utils.Crypto;
-import com.csandroid.myfirstapp.utils.EncryptHelper;
-import com.squareup.picasso.Picasso;
 
 import java.io.ByteArrayOutputStream;
-import java.security.KeyPair;
 import java.util.HashMap;
 
 public class AddContactActivity extends AppCompatActivity {
@@ -157,44 +154,28 @@ public class AddContactActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onGoodAPIVersion() {
-                //Toast.makeText(AddContactActivity.this,"API Version Matched!", Toast.LENGTH_SHORT).show();
-            }
+            public void onGoodAPIVersion() {}
 
             @Override
-            public void onBadAPIVersion() {
-                Toast.makeText(AddContactActivity.this,"API Version Mismatch!", Toast.LENGTH_SHORT).show();
-            }
+            public void onBadAPIVersion() {}
 
             @Override
-            public void onRegistrationSucceeded() {
-                Toast.makeText(AddContactActivity.this,"Registered!", Toast.LENGTH_SHORT).show();
-            }
+            public void onRegistrationSucceeded() {}
 
             @Override
-            public void onRegistrationFailed(String reason) {
-                Toast.makeText(AddContactActivity.this,"Not registered!", Toast.LENGTH_SHORT).show();
-            }
+            public void onRegistrationFailed(String reason) {}
 
             @Override
-            public void onLoginSucceeded() {
-                Toast.makeText(AddContactActivity.this,"Logged in!", Toast.LENGTH_SHORT).show();
-            }
+            public void onLoginSucceeded() {}
 
             @Override
-            public void onLoginFailed(String reason) {
-                Toast.makeText(AddContactActivity.this,"Not logged in : "+reason, Toast.LENGTH_SHORT).show();
-            }
+            public void onLoginFailed(String reason) {}
 
             @Override
-            public void onLogoutSucceeded() {
-                Toast.makeText(AddContactActivity.this,"Logged out!", Toast.LENGTH_SHORT).show();
-            }
+            public void onLogoutSucceeded() {}
 
             @Override
-            public void onLogoutFailed(String reason) {
-                Toast.makeText(AddContactActivity.this,"Not logged out!", Toast.LENGTH_SHORT).show();
-            }
+            public void onLogoutFailed(String reason) {}
 
             @Override
             public void onUserInfo(ServerAPI.UserInfo info) {
@@ -211,29 +192,19 @@ public class AddContactActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onContactLogin(String username) {
-                Toast.makeText(AddContactActivity.this,String.format("user %s logged in",username),Toast.LENGTH_SHORT).show();
-            }
+            public void onContactLogin(String username) {}
 
             @Override
-            public void onContactLogout(String username) {
-                Toast.makeText(AddContactActivity.this,String.format("user %s logged out",username),Toast.LENGTH_SHORT).show();
-            }
+            public void onContactLogout(String username) {}
 
             @Override
-            public void onSendMessageSucceeded(Object key) {
-                Toast.makeText(AddContactActivity.this,String.format("sent a message"),Toast.LENGTH_SHORT).show();
-            }
+            public void onSendMessageSucceeded(Object key) {}
 
             @Override
-            public void onSendMessageFailed(Object key, String reason) {
-                Toast.makeText(AddContactActivity.this,String.format("failed to send a message"),Toast.LENGTH_SHORT).show();
-            }
+            public void onSendMessageFailed(Object key, String reason) {}
 
             @Override
-            public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {
-                Toast.makeText(AddContactActivity.this,String.format("got message from %s",sender),Toast.LENGTH_SHORT).show();
-            }
+            public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {}
         });
     }
 
