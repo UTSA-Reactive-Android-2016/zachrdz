@@ -6,14 +6,12 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.Toast;
 
 import com.android.volley.VolleyError;
@@ -26,9 +24,7 @@ import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.models.Message;
 import com.csandroid.myfirstapp.utils.Crypto;
-import com.csandroid.myfirstapp.utils.EncryptHelper;
 
-import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -131,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
             recView.invalidate();
 
             initServerAPI();
-            startRepeatingTask();
+            initMessageStatusPoll();
         }
     }
 
