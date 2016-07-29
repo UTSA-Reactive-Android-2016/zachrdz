@@ -35,6 +35,8 @@ import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.utils.Crypto;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 
 public class SettingsActivity extends AppCompatActivity {
@@ -389,9 +391,7 @@ public class SettingsActivity extends AppCompatActivity {
         String publicKey;
 
         // Make sure an image is selected
-        if(userImage.equals("")){
-            Toast.makeText(this, "You must select a profile image.", Toast.LENGTH_LONG).show();
-        } else if(null == username || username.length() < 3){
+        if(null == username || username.length() < 3){
             // Username length must at least be 3
             Toast.makeText(this, "Your username must be at least 3 character long", Toast.LENGTH_LONG).show();
         } else {
@@ -424,6 +424,20 @@ public class SettingsActivity extends AppCompatActivity {
                 // Save them to our local Key Pair SQLite database
                 localKeyPair = new LocalKeyPair(username, newPublicKey, newPrivateKey);
                 localKeyPairDB.addKeyPair(localKeyPair);
+
+                // Set Default User Image if none selected
+                if(userImage == "") {
+                    InputStream is;
+                    byte[] buffer = new byte[0];
+                    try {
+                        is = getAssets().open("images/ic_android_black_24dp.png");
+                        buffer = new byte[is.available()];
+                        is.read(buffer);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    userImage = Base64.encodeToString(buffer,Base64.DEFAULT).trim();
+                }
 
                 // Register the new user
                 serverAPI.register(username, userImage, localKeyPair.getPublicKey());
