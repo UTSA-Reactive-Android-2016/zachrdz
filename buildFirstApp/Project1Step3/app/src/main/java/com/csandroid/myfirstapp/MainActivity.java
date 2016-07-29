@@ -128,6 +128,14 @@ public class MainActivity extends AppCompatActivity {
 
             initServerAPI();
             initMessageStatusPoll();
+        } else{
+            this.recList = new ArrayList<>();
+
+            // When the view is brought back into focus, reload messages
+            // list to make sure user doesn't see stale data.
+            this.mAdapter = new MessageAdapter(recList);
+            recView.setAdapter(this.mAdapter);
+            recView.invalidate();
         }
     }
 
@@ -302,6 +310,7 @@ public class MainActivity extends AppCompatActivity {
 
             this.mAdapter = new MessageAdapter(this.recList);
             recView.setAdapter(this.mAdapter);
+            recView.invalidate();
         }
     }
 }
