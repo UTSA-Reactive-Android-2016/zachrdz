@@ -23,6 +23,15 @@ public class Message {
         this.TTL = TTL;
     }
 
+    public Message(int localKeyPairId, String username, String subject, String body, int createdAt, int TTL){
+        this.localKeyPairId = localKeyPairId;
+        this.senderUsername = username;
+        this.subject = subject;
+        this.messageBody = body;
+        this.createdAt = createdAt;
+        this.TTL = TTL;
+    }
+
     public Message(int localKeyPairId, String username,  String subject, String body, int TTL){
         this.localKeyPairId = localKeyPairId;
         this.senderUsername = username;

@@ -55,7 +55,11 @@ public class MessageDBHandler extends SQLiteOpenHelper{
         values.put(KEY_SENDER_USERNAME, message.getSenderUsername());
         values.put(KEY_SUBJECT, message.getSubject());
         values.put(KEY_MESSAGE_BODY, message.getMessageBody());
-        values.put(KEY_CREATED_AT, (int) (System.currentTimeMillis() / 1000L));
+        if(message.getCreatedAt() > 0) {
+            values.put(KEY_CREATED_AT, message.getCreatedAt());
+        }else{
+            values.put(KEY_CREATED_AT, (int) (System.currentTimeMillis() / 1000L));
+        }
         values.put(KEY_TTL, message.getTTL());
 
         // Inserting Row

@@ -1,8 +1,10 @@
 package com.csandroid.myfirstapp;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -14,13 +16,16 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.android.volley.VolleyError;
 import com.csandroid.myfirstapp.adapters.MessageAdapter;
+import com.csandroid.myfirstapp.api.core.ServerAPI;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.db.MessageDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.models.Message;
+import com.csandroid.myfirstapp.utils.Crypto;
 import com.csandroid.myfirstapp.utils.EncryptHelper;
 
 import java.security.KeyPair;
@@ -28,6 +33,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+
+    LocalKeyPairDBHandler localKeyPairDB;
+    LocalKeyPair localKeyPair;
+    List<Contact> contactsList;
+    ServerAPI.Listener serverAPIListener;
+
+    ServerAPI serverAPI;
+    Crypto myCrypto;
+    private final static int mInterval = 1000 * 3; // 3 seconds
+    private Handler mHandler;
 
     private RecyclerView recView;
     private List<Message> recList;
@@ -43,14 +58,16 @@ public class MainActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
 
-        // Run initial tasks on app creation (first time)
-        //this.initAppCreationTasks();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        Boolean loggedIn = prefs.getBoolean("loggedIn", false);
 
         // Setup recycler view/list
         this.setupRecyclerView();
 
-        // Setup on click listeners
-        //this.initOnClickListeners();
+        if(loggedIn) {
+            this.initServerAPI();
+            this.initMessageStatusPoll();
+        }
     }
 
     // Menu icons are inflated just as they were with actionbar
@@ -99,22 +116,185 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();  // Always call the superclass method first
-        this.recList = getMessageListFromDB();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        Boolean loggedIn = prefs.getBoolean("loggedIn", false);
 
-        // When the view is brought back into focus, reload messages
-        // list to make sure user doesn't see stale data.
-        this.mAdapter = new MessageAdapter(recList);
-        recView.setAdapter(this.mAdapter);
-        recView.invalidate();
+        if(loggedIn) {
+            localKeyPairDB = new LocalKeyPairDBHandler(this);
+            localKeyPair = localKeyPairDB.getKeyPairByUsername(prefs.getString("username",""));
+            this.recList = getMessageListFromDB();
+
+            // When the view is brought back into focus, reload messages
+            // list to make sure user doesn't see stale data.
+            this.mAdapter = new MessageAdapter(recList);
+            recView.setAdapter(this.mAdapter);
+            recView.invalidate();
+
+            registerServerAPIListener();
+            startRepeatingTask();
+        }
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        Boolean loggedIn = prefs.getBoolean("loggedIn", false);
+
+        if(loggedIn) {
+            unregisterServerAPIListener();
+            stopRepeatingTask();
+        }
+    }
+
+    public void initServerAPI(){
+        // Logged in User setup for serverAPI
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String username = prefs.getString("username","");
+        String hostName = prefs.getString("serverName", "");
+        String portNumber = prefs.getString("serverPort", "");
+
+        localKeyPairDB = new LocalKeyPairDBHandler(this);
+        localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
+        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPrivateKey,localKeyPair.getPrivateKey()).apply();
+        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey,localKeyPair.getPublicKey()).apply();
+
+        myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
+        serverAPI = ServerAPI.getInstance(this.getApplicationContext(), myCrypto);
+        serverAPI.setServerName(hostName);
+        serverAPI.setServerPort(portNumber);
+
+        this.registerServerAPIListener();
+    }
+
+    private void registerServerAPIListener(){
+        final  MessageDBHandler dbMessage = new MessageDBHandler(this);
+        final ContactDBHandler dbContact = new ContactDBHandler(this);
+
+        serverAPI.registerListener(serverAPIListener = new ServerAPI.Listener() {
+            @Override
+            public void onCommandFailed(String commandName, VolleyError volleyError) {
+                Toast.makeText(MainActivity.this,String.format("command %s failed!",commandName),
+                        Toast.LENGTH_SHORT).show();
+                volleyError.printStackTrace();
+            }
+
+            @Override
+            public void onGoodAPIVersion() {}
+
+            @Override
+            public void onBadAPIVersion() {}
+
+            @Override
+            public void onRegistrationSucceeded() {}
+
+            @Override
+            public void onRegistrationFailed(String reason) {}
+
+            @Override
+            public void onLoginSucceeded() {}
+
+            @Override
+            public void onLoginFailed(String reason) {}
+
+            @Override
+            public void onLogoutSucceeded() { }
+
+            @Override
+            public void onLogoutFailed(String reason) {}
+
+            @Override
+            public void onUserInfo(ServerAPI.UserInfo info) {}
+
+            @Override
+            public void onUserNotFound(String username) {}
+
+            @Override
+            public void onContactLogin(String username) {}
+
+            @Override
+            public void onContactLogout(String username) {}
+
+            @Override
+            public void onSendMessageSucceeded(Object key) {}
+
+            @Override
+            public void onSendMessageFailed(Object key, String reason) {}
+
+            @Override
+            public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {
+                Message newMessage = new Message(localKeyPair.getId(),sender,subject,body, (int) (born_on_date/1000L), (int) (time_to_live/1000L));
+                int messageId = dbMessage.addMessage(newMessage);
+                recList.add(dbMessage.getMessage(messageId));
+                mAdapter.notifyItemInserted(recList.size() - 1);
+            }
+        });
+    }
+
+    private void unregisterServerAPIListener(){
+        serverAPI.unregisterListener(serverAPIListener);
+    }
+
+    public void initMessageStatusPoll(){
+        mHandler = new Handler();
+        startRepeatingTask();
+    }
+
+    Runnable mStatusChecker = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                doStartPushListener();
+            } finally {
+                // 100% guarantee that this always happens, even if
+                // your update method throws an exception
+                mHandler.postDelayed(mStatusChecker, mInterval);
+            }
+        }
+    };
+
+    void startRepeatingTask() {
+        mStatusChecker.run();
+    }
+
+    void stopRepeatingTask() {
+        mHandler.removeCallbacks(mStatusChecker);
+    }
+
+    public void doStartPushListener() {
+        // Logged in User setup for serverAPI
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String username = prefs.getString("username","");
+        serverAPI.startPushListener(username);
     }
 
     private List<Message> getMessageListFromDB() {
         MessageDBHandler db = new MessageDBHandler(this);
-        return db.getAllMessages();
+        return db.getMessages(localKeyPair.getId());
     }
 
     private void setupRecyclerView() {
-        this.recList = getMessageListFromDB();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        Boolean loggedIn = prefs.getBoolean("loggedIn", false);
+
+        if(loggedIn) {
+            localKeyPairDB = new LocalKeyPairDBHandler(this);
+            localKeyPair = localKeyPairDB.getKeyPairByUsername(prefs.getString("username",""));
+            MessageDBHandler db = new MessageDBHandler(this);
+            this.recList = getMessageListFromDB();
+
+            // Clean up messages
+            for (Message message : this.recList) {
+                if ((message.getCreatedAt() + message.getTTL()) > (int) (System.currentTimeMillis() / 1000L)) {
+                    db.deleteMessage(message);
+                }
+            }
+
+            // Get fresh list
+            this.recList = getMessageListFromDB();
+        } else{
+            this.recList = new ArrayList<>();
+        }
 
         //Recycler view stuff
         recView = (RecyclerView) findViewById(R.id.main_cards_list);
@@ -126,133 +306,6 @@ public class MainActivity extends AppCompatActivity {
 
             this.mAdapter = new MessageAdapter(this.recList);
             recView.setAdapter(this.mAdapter);
-        }
-    }
-
-    private void initAppCreationTasks(){
-        // Tasks to be run when the app is first installed
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        if (!prefs.getBoolean("firstTime", false)) {
-            // Create Fake contacts
-            this.createFakeContacts();
-
-            // Create Fake messages
-            this.createFakeMessages();
-
-            // Create KeyPair
-            this.setupInitialKeyPair();
-
-            // Mark first time has ran.
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putBoolean("firstTime", true);
-            editor.commit();
-        }
-    }
-
-    private void setupInitialKeyPair(){
-        // When this app is first installed, generate a key pair for the user
-        // and store it in the local database.
-
-        // Generate New Key Pair and get values
-        EncryptHelper encryptHelper = new EncryptHelper();
-        KeyPair keyPair = encryptHelper.generateKeyPair();
-        String privateKeyString = encryptHelper.getPrivateKeyString(keyPair);
-        String publicKeyString = encryptHelper.getPublicKeyString(keyPair);
-
-        // Create instance of LKP to set values
-        LocalKeyPair lkp = new LocalKeyPair();
-        lkp.setPrivateKey(privateKeyString);
-        lkp.setPublicKey(publicKeyString);
-
-        // Save key pair to local database
-        LocalKeyPairDBHandler lkpdb = new LocalKeyPairDBHandler(this);
-        lkpdb.addKeyPair(lkp);
-    }
-
-    private List<Message> createFakeMessages(){
-        MessageDBHandler dbMessage = new MessageDBHandler(this);
-        ContactDBHandler dbContact = new ContactDBHandler(this);
-        List<Message> messageList = new ArrayList<>();
-
-        Message m1 = new Message(0, "johndoe", "Really Important, read immediately!",
-                "This is a super important, secret message!", 5);
-        Message m2 = new Message(0, "mikejones", "Hows it going?",
-                "Just wanted to see what you were up to...", 15);
-        Message m3 = new Message(0, "stacyp", "Let me know if you get this.",
-                "This is my message with stuff...", 300);
-
-        // Generate 3 fake messages, make sure contact exists before generation.
-        if(dbContact.getContactByUsername("johndoe").getUsername() != null) {
-            // Add to db
-            int m1Id = dbMessage.addMessage(m1);
-            // Add to returned list
-            messageList.add(dbMessage.getMessage(m1Id));
-        }
-        if(dbContact.getContactByUsername("mikejones").getUsername() != null) {
-            // Add to db
-            int m2Id = dbMessage.addMessage(m2);
-            // Add to returned list
-            messageList.add(dbMessage.getMessage(m2Id));
-        }
-        if(dbContact.getContactByUsername("stacyp").getUsername() != null) {
-            // Add to db
-            int m3Id = dbMessage.addMessage(m3);
-            // Add to returned list
-            messageList.add(dbMessage.getMessage(m3Id));
-        }
-
-        // List of messages added to db
-        return messageList;
-    }
-
-    private List<Contact> createFakeContacts(){
-        ContactDBHandler db = new ContactDBHandler(this);
-        EncryptHelper encryptHelper = new EncryptHelper();
-
-        // Generate 3 keypairs, only utilizing public key since these contacts are fake
-        KeyPair kp1 = encryptHelper.generateKeyPair();
-        KeyPair kp2 = encryptHelper.generateKeyPair();
-        KeyPair kp3 = encryptHelper.generateKeyPair();
-
-        Contact c1 = new Contact(0, "johndoe", "http://i.imgur.com/0kKrYvV.jpg", encryptHelper.getPublicKeyString(kp1));
-        Contact c2 = new Contact(0, "mikejones", "http://i.imgur.com/lO1cnUP.jpg?1", encryptHelper.getPublicKeyString(kp2));
-        Contact c3 = new Contact(0, "stacyp", "https://i.imgur.com/Cs9IoHk.jpg", encryptHelper.getPublicKeyString(kp3));
-        List<Contact> contactList = new ArrayList<>();
-
-        // Add contacts to db
-        int c1Id = db.addContact(c1);
-        int c2Id = db.addContact(c2);
-        int c3Id = db.addContact(c3);
-
-        // Build contact list to return to caller
-        contactList.add(db.getContact(c1Id));
-        contactList.add(db.getContact(c2Id));
-        contactList.add(db.getContact(c3Id));
-
-        return contactList;
-    }
-
-    private void initOnClickListeners(){
-        FloatingActionButton fab = (FloatingActionButton)findViewById(R.id.generateFakeMessages);
-        if(null != fab) {
-            fab.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if(getMessageListFromDB().size() < 6) {
-                        // Generate fake messages, add them to list
-                        List<Message> newMessages = createFakeMessages();
-                        recList.addAll(newMessages);
-                        for (int i = 0; i < newMessages.size(); i++) {
-                            mAdapter.notifyItemInserted(recList.size() - i++);
-                        }
-                        Toast.makeText(v.getContext(), "Fake messages generated!",
-                                Toast.LENGTH_LONG).show();
-                    } else{
-                        Toast.makeText(v.getContext(), "Fake message limit reached!",
-                                Toast.LENGTH_LONG).show();
-                    }
-                }
-            });
         }
     }
 }

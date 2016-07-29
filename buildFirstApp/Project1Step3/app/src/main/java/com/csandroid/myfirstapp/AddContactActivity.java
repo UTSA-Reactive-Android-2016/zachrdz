@@ -225,7 +225,7 @@ public class AddContactActivity extends AppCompatActivity {
     @Override
     public void onPause(){
         super.onPause();
-        serverAPI.unregisterListener(serverAPIListener);
+        unregisterServerAPIListener();
     }
 
     /************************** Bitmap (Encoding & Decoding) **************************************/
