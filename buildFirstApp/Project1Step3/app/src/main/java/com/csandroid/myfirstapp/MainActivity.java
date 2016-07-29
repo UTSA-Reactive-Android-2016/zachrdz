@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
             recView.setAdapter(this.mAdapter);
             recView.invalidate();
 
-            registerServerAPIListener();
+            initServerAPI();
             startRepeatingTask();
         }
     }
