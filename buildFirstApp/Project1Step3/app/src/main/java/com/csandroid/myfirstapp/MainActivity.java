@@ -10,6 +10,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -25,6 +26,7 @@ import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.models.Message;
 import com.csandroid.myfirstapp.utils.Crypto;
 
+import java.io.Console;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -115,27 +117,11 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         Boolean loggedIn = prefs.getBoolean("loggedIn", false);
 
+        this.setupRecyclerView();
+
         if(loggedIn) {
-            localKeyPairDB = new LocalKeyPairDBHandler(this);
-            localKeyPair = localKeyPairDB.getKeyPairByUsername(prefs.getString("username",""));
-            this.recList = getMessageListFromDB();
-
-            // When the view is brought back into focus, reload messages
-            // list to make sure user doesn't see stale data.
-            this.mAdapter = new MessageAdapter(recList);
-            recView.setAdapter(this.mAdapter);
-            recView.invalidate();
-
             initServerAPI();
             initMessageStatusPoll();
-        } else{
-            this.recList = new ArrayList<>();
-
-            // When the view is brought back into focus, reload messages
-            // list to make sure user doesn't see stale data.
-            this.mAdapter = new MessageAdapter(recList);
-            recView.setAdapter(this.mAdapter);
-            recView.invalidate();
         }
     }
 
@@ -289,7 +275,8 @@ public class MainActivity extends AppCompatActivity {
 
             // Clean up messages
             for (Message message : this.recList) {
-                if ((message.getCreatedAt() + message.getTTL()) > (int) (System.currentTimeMillis() / 1000L)) {
+                Boolean expired = ((int) (System.currentTimeMillis() / 1000L) > message.getCreatedAt() + message.getTTL());
+                if (expired) {
                     db.deleteMessage(message);
                 }
             }
@@ -311,6 +298,7 @@ public class MainActivity extends AppCompatActivity {
             this.mAdapter = new MessageAdapter(this.recList);
             recView.setAdapter(this.mAdapter);
             recView.invalidate();
+            mAdapter.notifyDataSetChanged();
         }
     }
 }
