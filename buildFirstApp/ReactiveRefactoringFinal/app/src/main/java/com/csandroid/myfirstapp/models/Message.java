@@ -1,0 +1,98 @@
+package com.csandroid.myfirstapp.models;
+
+public class Message {
+    private int id;
+    private int localKeyPairId;
+    private String senderUsername;
+    private String subject;
+    private String messageBody;
+    private int createdAt;
+    private int TTL;
+
+    public Message(){
+
+    }
+
+    public Message(int id, int localKeyPairId, String username, String subject, String body, int createdAt, int TTL){
+        this.id = id;
+        this.localKeyPairId = localKeyPairId;
+        this.senderUsername = username;
+        this.subject = subject;
+        this.messageBody = body;
+        this.createdAt = createdAt;
+        this.TTL = TTL;
+    }
+
+    public Message(int localKeyPairId, String username, String subject, String body, int createdAt, int TTL){
+        this.localKeyPairId = localKeyPairId;
+        this.senderUsername = username;
+        this.subject = subject;
+        this.messageBody = body;
+        this.createdAt = createdAt;
+        this.TTL = TTL;
+    }
+
+    public Message(int localKeyPairId, String username,  String subject, String body, int TTL){
+        this.localKeyPairId = localKeyPairId;
+        this.senderUsername = username;
+        this.subject = subject;
+        this.messageBody = body;
+        this.TTL = TTL;
+    }
+
+    public int getLocalKeyPairId() {
+        return localKeyPairId;
+    }
+
+    public void setLocalKeyPairId(int localKeyPairId) {
+        this.localKeyPairId = localKeyPairId;
+    }
+
+    public int getTTL() {
+        return TTL;
+    }
+
+    public void setTTL(int TTL) {
+        this.TTL = TTL;
+    }
+
+    public String getSenderUsername() {
+        return senderUsername;
+    }
+
+    public void setSenderUsername(String senderUsername) {
+        this.senderUsername = senderUsername;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+
+    public String getMessageBody() {
+        return messageBody;
+    }
+
+    public void setMessageBody(String messageBody) {
+        this.messageBody = messageBody;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(int createdAt) {
+        this.createdAt = createdAt;
+    }
+}
