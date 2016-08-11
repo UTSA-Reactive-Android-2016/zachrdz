@@ -15,7 +15,7 @@
         android:paddingRight="@dimen/activity_horizontal_margin"
         android:paddingTop="@dimen/activity_vertical_margin"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:context="com.csandroid.myfirstapp.EditContactActivity"
+        tools:context=".activities.EditContactActivity"
         tools:showIn="@layout/activity_edit_contact">
 
         <EditText

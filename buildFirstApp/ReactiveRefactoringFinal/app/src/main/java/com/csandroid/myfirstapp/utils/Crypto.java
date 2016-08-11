@@ -47,14 +47,9 @@ public class Crypto {
 
     KeyPair myRSAKeyPair;
 
-    @TargetApi(Build.VERSION_CODES.GINGERBREAD)
     public Crypto(SharedPreferences preferences){
         String RSAPrivateKey = preferences.getString(prefPrivateKey,"");
         String RSAPublicKey  = preferences.getString(prefPublicKey,"");
-
-        Log.d("Crypto","Public key string: "+RSAPublicKey);
-        Log.d("Crypto","Decoded: "+getPublicKeyFromString(RSAPublicKey));
-
 
         if(RSAPrivateKey.isEmpty() || !readKeyPair(RSAPrivateKey,RSAPublicKey)) {
             myRSAKeyPair = generateNewRSAKeyPair();

@@ -1,4 +1,4 @@
-package com.csandroid.myfirstapp;
+package com.csandroid.myfirstapp.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -13,6 +13,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.db.MessageDBHandler;
 import com.csandroid.myfirstapp.models.Message;
 

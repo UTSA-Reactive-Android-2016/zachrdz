@@ -15,8 +15,10 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.csandroid.myfirstapp.SettingsActivity"
-    tools:showIn="@layout/activity_settings">
+    tools:context=".activities.SettingsActivity"
+    tools:showIn="@layout/activity_settings"
+    android:descendantFocusability="beforeDescendants"
+    android:focusableInTouchMode="true">
 
     <EditText
         android:layout_width="fill_parent"
@@ -96,7 +98,7 @@
         android:id="@+id/textView4"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_below="@+id/register"
+        android:layout_below="@+id/forceLogout"
         android:layout_marginTop="20dp" />
 
     <TextView
@@ -127,5 +129,14 @@
         android:id="@+id/register"
         android:layout_centerHorizontal="true"
         android:layout_below="@+id/username" />
+
+    <Button
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="Force Local Logout"
+        android:id="@+id/forceLogout"
+        android:visibility="gone"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@+id/register" />
 </RelativeLayout>
 </ScrollView>

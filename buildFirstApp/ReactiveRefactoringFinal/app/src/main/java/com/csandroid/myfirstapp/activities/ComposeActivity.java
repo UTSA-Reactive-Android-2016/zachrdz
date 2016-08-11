@@ -1,4 +1,4 @@
-package com.csandroid.myfirstapp;
+package com.csandroid.myfirstapp.activities;
 
 import android.content.Context;
 import android.content.DialogInterface;
@@ -18,6 +18,7 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.android.volley.VolleyError;
+import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.api.core.ServerAPI;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;

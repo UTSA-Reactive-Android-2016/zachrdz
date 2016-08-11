@@ -1,4 +1,4 @@
-package com.csandroid.myfirstapp;
+package com.csandroid.myfirstapp.activities;
 
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +10,7 @@ import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Base64;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
@@ -20,24 +21,40 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.VolleyError;
+import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.api.core.ServerAPI;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
+import com.csandroid.myfirstapp.models.UserInfo;
+import com.csandroid.myfirstapp.stages.GetServerKeyStage;
+import com.csandroid.myfirstapp.stages.GetUserInfoStage;
+import com.csandroid.myfirstapp.stages.RegistrationStage;
 import com.csandroid.myfirstapp.utils.Crypto;
 
 import java.io.ByteArrayOutputStream;
+import java.security.PublicKey;
 import java.util.HashMap;
+
+import rx.Observable;
+import rx.Observer;
+import rx.Subscription;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
+import rx.subscriptions.CompositeSubscription;
 
 public class AddContactActivity extends AppCompatActivity {
 
-    ServerAPI serverAPI;
+    //ServerAPI serverAPI;
     LocalKeyPairDBHandler localKeyPairDB;
     LocalKeyPair localKeyPair;
     Crypto myCrypto;
-    HashMap<String,ServerAPI.UserInfo> myUserMap = new HashMap<>();
-    ServerAPI.Listener serverAPIListener;
+    HashMap<String,UserInfo> myUserMap = new HashMap<>();
+    //ServerAPI.Listener serverAPIListener;
+
+    // Subscription holder
+    CompositeSubscription cs = new CompositeSubscription();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +66,7 @@ public class AddContactActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
         this.initOnClickListeners();
-        this.initServerAPI();
+        this.initServer();
     }
 
     @Override
@@ -72,11 +89,16 @@ public class AddContactActivity extends AppCompatActivity {
         Button saveBtn = (Button) findViewById(R.id.button2);
         ImageButton searchBtn = (ImageButton) findViewById(R.id.search_button);
 
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String hostName = prefs.getString("serverName", "");
+        String portNumber = prefs.getString("serverPort", "");
+        final String server = "http://" + hostName + ":" + portNumber;
+
         if(null != saveBtn && null != usernameField && null != publicKeyField) {
             saveBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    ServerAPI.UserInfo userSelected = myUserMap.get(getUserNameFieldValue());
+                    UserInfo userSelected = myUserMap.get(getUserNameFieldValue());
 
                     if (userSelected != null){
                         ContactDBHandler db = new ContactDBHandler(AddContactActivity.this);
@@ -117,7 +139,7 @@ public class AddContactActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View v) {
                     if(null != usernameField && usernameField.getText().toString().length() > 0) {
-                        serverAPI.getUserInfo(getUserNameFieldValue());
+                        doSearch(getUserNameFieldValue(), server);
                     } else if(null != usernameField && usernameField.getText().toString().length() == 0){
                         String errMsg = "You didn't type anything to search!";
                         Toast.makeText(v.getContext(), "Error: " + errMsg,
@@ -128,12 +150,10 @@ public class AddContactActivity extends AppCompatActivity {
         }
     }
 
-    public void initServerAPI(){
+    public void initServer(){
         // Logged in User setup for serverAPI
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String username = prefs.getString("username","");
-        String hostName = prefs.getString("serverName", "");
-        String portNumber = prefs.getString("serverPort", "");
+        final String username = prefs.getString("username","");
 
         localKeyPairDB = new LocalKeyPairDBHandler(this);
         localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
@@ -141,91 +161,77 @@ public class AddContactActivity extends AppCompatActivity {
         getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey,localKeyPair.getPublicKey()).apply();
 
         myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
-        serverAPI = ServerAPI.getInstance(this.getApplicationContext(), myCrypto);
-        serverAPI.setServerName(hostName);
-        serverAPI.setServerPort(portNumber);
-
-        this.registerServerAPIListener();
-    }
-
-    private void registerServerAPIListener(){
-        serverAPI.registerListener(serverAPIListener = new ServerAPI.Listener() {
-            @Override
-            public void onCommandFailed(String commandName, VolleyError volleyError) {
-                Toast.makeText(AddContactActivity.this,String.format("command %s failed!",commandName),
-                        Toast.LENGTH_SHORT).show();
-                volleyError.printStackTrace();
-            }
-
-            @Override
-            public void onGoodAPIVersion() {}
-
-            @Override
-            public void onBadAPIVersion() {}
-
-            @Override
-            public void onRegistrationSucceeded() {}
-
-            @Override
-            public void onRegistrationFailed(String reason) {}
-
-            @Override
-            public void onLoginSucceeded() {}
-
-            @Override
-            public void onLoginFailed(String reason) {}
-
-            @Override
-            public void onLogoutSucceeded() {}
-
-            @Override
-            public void onLogoutFailed(String reason) {}
-
-            @Override
-            public void onUserInfo(ServerAPI.UserInfo info) {
-                myUserMap.put(info.username,info);
-
-                setPublicKeyFieldValue(Crypto.getPublicKeyString(info.publicKey));
-                setUserImageFieldValue(info.image);
-                Toast.makeText(AddContactActivity.this,String.format("User Found: %s",info.username),Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onUserNotFound(String username) {
-                Toast.makeText(AddContactActivity.this,String.format("user %s not found!",username),Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onContactLogin(String username) {}
-
-            @Override
-            public void onContactLogout(String username) {}
-
-            @Override
-            public void onSendMessageSucceeded(Object key) {}
-
-            @Override
-            public void onSendMessageFailed(Object key, String reason) {}
-
-            @Override
-            public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {}
-        });
-    }
-
-    private void unregisterServerAPIListener(){
-        serverAPI.unregisterListener(serverAPIListener);
     }
 
     @Override
     public void onResume(){
         super.onResume();
-        registerServerAPIListener();
+        cs = new CompositeSubscription();
     }
 
     @Override
     public void onPause(){
         super.onPause();
-        unregisterServerAPIListener();
+        cs.unsubscribe();
+        cs = null;
+    }
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        if(null != cs){
+            cs.unsubscribe();
+        }
+        cs = null;
+    }
+
+    public void doSearch(final String username, final String server){
+        // Attempt to search for user
+        Subscription searchSub = Observable.just(0)
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .flatMap(new GetUserInfoStage(server, username))
+                .subscribe(new Observer<UserInfo>() {
+                    @Override
+                    public void onCompleted() {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {}
+                        });
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        final Throwable fe = e;
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Log.d("ZachLog","Error: User Search",fe);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onNext(final UserInfo info) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                // handle initial state here
+                                if(null != info){
+                                    myUserMap.put(info.username,info);
+
+                                    setPublicKeyFieldValue(Crypto.getPublicKeyString(info.publicKey));
+                                    setUserImageFieldValue(info.image);
+                                    Toast.makeText(AddContactActivity.this,String.format("User Found: %s",info.username),Toast.LENGTH_SHORT).show();
+                                }else{
+                                    Toast.makeText(AddContactActivity.this,String.format("user %s not found!",username),Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        });
+                    }
+                });
+
+        cs.add(searchSub);
     }
 
     /************************** Bitmap (Encoding & Decoding) **************************************/

@@ -11,7 +11,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.csandroid.myfirstapp.R;
-import com.csandroid.myfirstapp.ReadMessageActivity;
+import com.csandroid.myfirstapp.activities.ReadMessageActivity;
 import com.csandroid.myfirstapp.db.MessageDBHandler;
 import com.csandroid.myfirstapp.models.Message;
 

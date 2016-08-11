@@ -1,4 +1,4 @@
-package com.csandroid.myfirstapp;
+package com.csandroid.myfirstapp.activities;
 
 import android.content.Context;
 import android.content.Intent;
@@ -13,9 +13,13 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.VolleyError;
+import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.adapters.MessageAdapter;
 import com.csandroid.myfirstapp.api.core.ServerAPI;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
@@ -25,19 +29,32 @@ import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.models.Message;
 import com.csandroid.myfirstapp.utils.Crypto;
+import com.csandroid.myfirstapp.utils.WebHelper;
 
-import java.io.Console;
+import org.json.JSONObject;
+
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import rx.Notification;
+import rx.Observable;
+import rx.Observer;
+import rx.Subscription;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Func1;
+import rx.schedulers.Schedulers;
+import rx.subscriptions.CompositeSubscription;
 
 public class MainActivity extends AppCompatActivity {
 
     LocalKeyPairDBHandler localKeyPairDB;
     LocalKeyPair localKeyPair;
     List<Contact> contactsList;
-    ServerAPI.Listener serverAPIListener;
+    //ServerAPI.Listener serverAPIListener;
 
-    ServerAPI serverAPI;
+    //ServerAPI serverAPI;
     Crypto myCrypto;
     private final static int mInterval = 1000 * 3; // 3 seconds
     private Handler mHandler;
@@ -45,6 +62,9 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView recView;
     private List<Message> recList;
     private MessageAdapter mAdapter;
+
+    // Subscription holder
+    private CompositeSubscription cs = new CompositeSubscription();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,8 +83,8 @@ public class MainActivity extends AppCompatActivity {
         this.setupRecyclerView();
 
         if(loggedIn) {
-            this.initServerAPI();
-            this.initMessageStatusPoll();
+            this.initServer();
+            //this.initMessageStatusPoll();
         }
     }
 
@@ -114,14 +134,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();  // Always call the superclass method first
+        cs.unsubscribe();
+        cs = null;
+        cs = new CompositeSubscription();
+
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         Boolean loggedIn = prefs.getBoolean("loggedIn", false);
 
         this.setupRecyclerView();
+        this.initServer();
 
         if(loggedIn) {
-            initServerAPI();
-            initMessageStatusPoll();
+            //initServerAPI();
+            //initMessageStatusPoll();
         }
     }
 
@@ -132,17 +157,28 @@ public class MainActivity extends AppCompatActivity {
         Boolean loggedIn = prefs.getBoolean("loggedIn", false);
 
         if(loggedIn) {
-            unregisterServerAPIListener();
-            stopRepeatingTask();
+            //unregisterServerAPIListener();
+            //stopRepeatingTask();
         }
+        cs.unsubscribe();
     }
 
-    public void initServerAPI(){
-        // Logged in User setup for serverAPI
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        cs.unsubscribe();
+        cs = null;
+    }
+
+    public void initServer(){
+        // Logged in User setup for server
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String username = prefs.getString("username","");
         String hostName = prefs.getString("serverName", "");
         String portNumber = prefs.getString("serverPort", "");
+        PublicKey serverKey = Crypto.getPublicKeyFromString(prefs.getString("serverKey", ""));
+        final String server = "http://" + hostName + ":" + portNumber;
+        Boolean loggedIn = prefs.getBoolean("loggedIn", false);
 
         localKeyPairDB = new LocalKeyPairDBHandler(this);
         localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
@@ -150,17 +186,66 @@ public class MainActivity extends AppCompatActivity {
         getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey,localKeyPair.getPublicKey()).apply();
 
         myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
-        serverAPI = ServerAPI.getInstance(this.getApplicationContext(), myCrypto);
-        serverAPI.setServerName(hostName);
-        serverAPI.setServerPort(portNumber);
 
-        this.registerServerAPIListener();
+        final TextView serverMsgBanner = (TextView) findViewById(R.id.serverMsg);
+
+        if(loggedIn) {
+            Log.d("ZachLOG: ", "logged in");
+            // Poll to continuously check that connection with server is alive
+            Subscription serverConn = Observable.interval(0, 5, TimeUnit.SECONDS, Schedulers.newThread())
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .subscribe(new Observer<Long>() {
+                    @Override
+                    public void onCompleted() {
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onNext(Long numTicks) {
+                        try {
+                            String response = WebHelper.StringGet(server + "/");
+                            Log.d("LOG: ", "Server connection alive...");
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (serverMsgBanner != null)
+                                        serverMsgBanner.setVisibility(View.GONE);
+                                }
+                            });
+                        } catch (Exception e) {
+                            // Connection could not be made
+                            //e.printStackTrace();
+                            Log.d("LOG: ", "Server connection dead...");
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (serverMsgBanner != null)
+                                        serverMsgBanner.setVisibility(View.VISIBLE);
+                                }
+                            });
+                        }
+                    }
+                });
+            cs.add(serverConn);
+        }
+
+
+
+        //serverAPI = ServerAPI.getInstance(this.getApplicationContext(), myCrypto);
+        //serverAPI.setServerName(hostName);
+        //serverAPI.setServerPort(portNumber);
+
+        //this.registerServerAPIListener();
     }
 
     private void registerServerAPIListener(){
         final  MessageDBHandler dbMessage = new MessageDBHandler(this);
         final ContactDBHandler dbContact = new ContactDBHandler(this);
-
+        /*
         serverAPI.registerListener(serverAPIListener = new ServerAPI.Listener() {
             @Override
             public void onCommandFailed(String commandName, VolleyError volleyError) {
@@ -219,10 +304,11 @@ public class MainActivity extends AppCompatActivity {
                 mAdapter.notifyItemInserted(recList.size() - 1);
             }
         });
+        */
     }
 
     private void unregisterServerAPIListener(){
-        serverAPI.unregisterListener(serverAPIListener);
+        //serverAPI.unregisterListener(serverAPIListener);
     }
 
     public void initMessageStatusPoll(){
@@ -255,7 +341,7 @@ public class MainActivity extends AppCompatActivity {
         // Logged in User setup for serverAPI
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String username = prefs.getString("username","");
-        serverAPI.startPushListener(username);
+        //serverAPI.startPushListener(username);
     }
 
     private List<Message> getMessageListFromDB() {

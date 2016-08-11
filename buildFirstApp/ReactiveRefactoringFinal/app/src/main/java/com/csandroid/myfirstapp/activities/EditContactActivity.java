@@ -1,4 +1,4 @@
-package com.csandroid.myfirstapp;
+package com.csandroid.myfirstapp.activities;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -14,9 +14,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
-import com.squareup.picasso.Picasso;
 
 import java.io.ByteArrayOutputStream;
 

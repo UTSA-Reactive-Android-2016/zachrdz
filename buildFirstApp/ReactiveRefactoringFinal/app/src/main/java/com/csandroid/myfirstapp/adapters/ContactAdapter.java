@@ -13,12 +13,10 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.csandroid.myfirstapp.ComposeActivity;
-import com.csandroid.myfirstapp.EditContactActivity;
+import com.csandroid.myfirstapp.activities.ComposeActivity;
+import com.csandroid.myfirstapp.activities.EditContactActivity;
 import com.csandroid.myfirstapp.R;
-import com.csandroid.myfirstapp.ext.CircleTransform;
 import com.csandroid.myfirstapp.models.Contact;
-import com.squareup.picasso.Picasso;
 
 import java.io.ByteArrayOutputStream;
 import java.util.List;
