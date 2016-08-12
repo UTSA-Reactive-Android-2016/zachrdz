@@ -18,10 +18,11 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:id="@+id/search_bar"
+        android:singleLine="true"
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="false"
-        android:hint="Search"
+        android:hint="Search Contacts..."
         android:background="@drawable/edittext_bg"
         android:layout_toLeftOf="@+id/search_button"
         android:layout_marginRight="10dp" />

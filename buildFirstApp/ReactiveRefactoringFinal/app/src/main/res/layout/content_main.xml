@@ -32,4 +32,14 @@
         android:visibility="gone"
         android:textColor="#FFF" />
 
+    <TextView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="You are not logged in."
+        android:id="@+id/not_logged_in"
+        android:layout_centerHorizontal="true"
+        android:gravity="center_horizontal"
+        android:visibility="gone" />
+
 </RelativeLayout>

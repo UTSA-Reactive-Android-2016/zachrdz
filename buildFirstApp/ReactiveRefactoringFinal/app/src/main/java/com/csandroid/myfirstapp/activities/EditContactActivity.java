@@ -1,12 +1,15 @@
 package com.csandroid.myfirstapp.activities;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Base64;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
@@ -17,12 +20,23 @@ import android.widget.Toast;
 import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
+import com.csandroid.myfirstapp.stages.RemoveContactStage;
+import com.csandroid.myfirstapp.utils.Crypto;
 
 import java.io.ByteArrayOutputStream;
+import java.security.PublicKey;
+
+import rx.Observable;
+import rx.Observer;
+import rx.Subscription;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
+import rx.subscriptions.CompositeSubscription;
 
 public class EditContactActivity extends AppCompatActivity {
 
     private int contactId;
+    private CompositeSubscription cs = new CompositeSubscription();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,6 +44,7 @@ public class EditContactActivity extends AppCompatActivity {
         setContentView(R.layout.activity_edit_contact);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        setTitle("Edit Contact");
         if(null != getSupportActionBar()){
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
@@ -77,19 +92,20 @@ public class EditContactActivity extends AppCompatActivity {
 
     public void initOnClickListeners(){
         ImageButton deleteBtn = (ImageButton) findViewById(R.id.imageButton2);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        final String username = prefs.getString("username","");
+        String hostName = prefs.getString("serverName", "");
+        String portNumber = prefs.getString("serverPort", "");
+        PublicKey serverKey = Crypto.getPublicKeyFromString(prefs.getString("serverKey", ""));
+        final String server = "http://" + hostName + ":" + portNumber;
 
         if(null != deleteBtn) {
             deleteBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Intent contactsIntent = new Intent(EditContactActivity.this, ContactsActivity.class);
                     ContactDBHandler db = new ContactDBHandler(v.getContext());
                     Contact contact = db.getContact(EditContactActivity.this.contactId);
-                    db.deleteContact(contact);
-                    Toast.makeText(v.getContext(), "Deleted contact: " + contact.getUsername(),
-                            Toast.LENGTH_LONG).show();
-                    contactsIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    startActivity(contactsIntent);
+                    doRemoveContact(username, server, contact.getUsername());
                 }
             });
         }
@@ -121,5 +137,80 @@ public class EditContactActivity extends AppCompatActivity {
             userImageField.setBackgroundResource(0);
             userImageField.setImageBitmap(decodeBase64(value));
         }
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        cs = new CompositeSubscription();
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        cs.unsubscribe();
+        cs = null;
+    }
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        if(null != cs){
+            cs.unsubscribe();
+        }
+        cs = null;
+    }
+
+    public void doRemoveContact(final String username, final String server, final String contact){
+        // Attempt to search for user
+        Subscription removeContactSub = Observable.just("ok")
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .flatMap(new RemoveContactStage(server, username, contact))
+                .subscribe(new Observer<String>() {
+                    @Override
+                    public void onCompleted() {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {}
+                        });
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        final Throwable fe = e;
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Log.d("ZachLog","Error: Contact Removal",fe);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onNext(final String response) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if(response.equals("ok")){
+                                    Toast.makeText(EditContactActivity.this,String.format("Unlinked contact",username),Toast.LENGTH_SHORT).show();
+
+                                    // Remove contact locally now and go back to contacts Activity
+                                    Intent contactsIntent = new Intent(EditContactActivity.this, ContactsActivity.class);
+                                    ContactDBHandler db = new ContactDBHandler(getApplicationContext());
+                                    Contact contact = db.getContact(EditContactActivity.this.contactId);
+                                    db.deleteContact(contact);
+                                    Toast.makeText(EditContactActivity.this, "Deleted contact: " + contact.getUsername(), Toast.LENGTH_LONG).show();
+                                    contactsIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                    startActivity(contactsIntent);
+                                } else{
+                                    Toast.makeText(EditContactActivity.this,String.format("Error: Unable to unlink contact",username),Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        });
+                    }
+                });
+
+        cs.add(removeContactSub);
     }
 }

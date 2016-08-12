@@ -4,22 +4,21 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Toast;
+import android.widget.EditText;
 
-import com.android.volley.VolleyError;
 import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.adapters.ContactAdapter;
-import com.csandroid.myfirstapp.api.core.ServerAPI;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
@@ -27,11 +26,10 @@ import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.stages.NotificationStage;
 import com.csandroid.myfirstapp.stages.RegisterContactsStage;
 import com.csandroid.myfirstapp.utils.Crypto;
-import com.csandroid.myfirstapp.Notification;
+import com.csandroid.myfirstapp.utils.Notification;
 
 import java.security.PublicKey;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -49,9 +47,8 @@ public class ContactsActivity extends AppCompatActivity {
     LocalKeyPairDBHandler localKeyPairDB;
     LocalKeyPair localKeyPair;
     List<Contact> contactsList;
-    //ServerAPI.Listener serverAPIListener;
+    ContactAdapter ca;
 
-    //ServerAPI serverAPI;
     Crypto myCrypto;
 
     // Subscription holder
@@ -63,12 +60,15 @@ public class ContactsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_contacts);
         Toolbar toolbar = (Toolbar) findViewById(R.id.contacts_toolbar);
         setSupportActionBar(toolbar);
+        setTitle("Contacts");
         if(null != getSupportActionBar()){
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        this.initServer();
+        this.initKey();
         this.setupRecyclerView();
+        this.registerContacts();
+        this.initSearchListener();
     }
 
     // Menu icons are inflated just as they were with actionbar
@@ -110,7 +110,15 @@ public class ContactsActivity extends AppCompatActivity {
         recList.setAdapter(ca);
         recList.invalidate();
 
-        this.initServer();
+        this.initKey();
+        this.registerContacts();
+
+        // Clear out search field text if any typed
+        EditText searchField = (EditText)findViewById(R.id.search_bar);
+        if(searchField != null) {
+            searchField.setText("");
+            searchField.clearFocus();
+        }
     }
 
     @Override
@@ -129,23 +137,26 @@ public class ContactsActivity extends AppCompatActivity {
         cs = null;
     }
 
-    public void initServer(){
-        // Logged in User setup for serverAPI
+    public void initKey() {
+        // Logged in User
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        final String username = prefs.getString("username","");
+        final String username = prefs.getString("username", "");
+
+        localKeyPairDB = new LocalKeyPairDBHandler(this);
+        localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
+        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPrivateKey, localKeyPair.getPrivateKey()).apply();
+        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey, localKeyPair.getPublicKey()).apply();
+
+        myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
+    }
+
+    public void registerContacts(){
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        final String username = prefs.getString("username", "");
         String hostName = prefs.getString("serverName", "");
         String portNumber = prefs.getString("serverPort", "");
         PublicKey serverKey = Crypto.getPublicKeyFromString(prefs.getString("serverKey", ""));
         final String server = "http://" + hostName + ":" + portNumber;
-
-        localKeyPairDB = new LocalKeyPairDBHandler(this);
-        localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
-        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPrivateKey,localKeyPair.getPrivateKey()).apply();
-        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey,localKeyPair.getPublicKey()).apply();
-
-        myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
-
-        createList();
 
         ArrayList<String> contacts = new ArrayList<>();
         for(Contact contact:contactsList){
@@ -165,7 +176,7 @@ public class ContactsActivity extends AppCompatActivity {
                 .subscribe(new Observer<Notification>() {
                     @Override
                     public void onCompleted() {
-                        Subscription contactStatus = Observable.interval(0, 2, TimeUnit.SECONDS, Schedulers.newThread())
+                        Subscription contactStatus = Observable.interval(0, 1, TimeUnit.SECONDS, Schedulers.newThread())
                                 .subscribeOn(AndroidSchedulers.mainThread())
                                 .subscribe(new Observer<Long>() {
                                     @Override
@@ -228,6 +239,49 @@ public class ContactsActivity extends AppCompatActivity {
         cs.add(regContacts);
     }
 
+    public void initSearchListener(){
+        EditText searchField = (EditText)findViewById(R.id.search_bar);
+
+        if (null != searchField) {
+            // When the user edits the username text field, update the contacts shown
+            searchField.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+                    if(createList().size() > 0) {
+                        cs.unsubscribe();
+                        cs = null;
+                        cs = new CompositeSubscription();
+
+                        Log.d("Search Text", getSearchFieldValue());
+                        createList();
+                        // User is actively editing username field. Update list appropriately
+                        ArrayList<Contact> filteredList = new ArrayList<>();
+                        for (Contact c : contactsList) {
+                            if (c.getUsername().contains(getSearchFieldValue())) {
+                                filteredList.add(c);
+                                Log.d("Search Text Match:", c.getUsername());
+                            }
+                        }
+                        contactsList = filteredList;
+                        ca = new ContactAdapter(contactsList);
+                        recList.setAdapter(ca);
+                        recList.invalidate();
+
+                        registerContacts();
+                    }
+                }
+            });
+        }
+    }
+
     private void handleContactStatus(Notification notification){
         String username = "";
         // handle updating state here
@@ -287,8 +341,18 @@ public class ContactsActivity extends AppCompatActivity {
             llm.setOrientation(LinearLayoutManager.VERTICAL);
             recList.setLayoutManager(llm);
 
-            ContactAdapter ca = new ContactAdapter(createList());
+            createList();
+            ca = new ContactAdapter(contactsList);
             recList.setAdapter(ca);
+        }
+    }
+
+    private String getSearchFieldValue() {
+        EditText searchField = ((EditText) findViewById(R.id.search_bar));
+        if (searchField != null) {
+            return searchField.getText().toString();
+        } else {
+            return "";
         }
     }
 }

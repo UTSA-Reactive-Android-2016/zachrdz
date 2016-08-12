@@ -1,5 +1,6 @@
 package com.csandroid.myfirstapp.activities;
 
+import android.animation.ObjectAnimator;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -8,8 +9,10 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,6 +30,7 @@ public class ReadMessageActivity extends AppCompatActivity {
         setContentView(R.layout.activity_read_message);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        setTitle("Read");
 
         if(null != getSupportActionBar()){
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -227,5 +231,24 @@ public class ReadMessageActivity extends AppCompatActivity {
                     Toast.LENGTH_LONG).show();
             startActivity(mainIntent);
         }
+
+        // Start progress bar animation for timer
+        long timeLeft = (msg.getCreatedAt() + msg.getTTL()) - (System.currentTimeMillis()/1000L);
+        if(timeLeft < 0){
+            timeLeft = 0;
+        }
+        startAnimation(timeLeft, msg.getTTL());
+    }
+
+    public void startAnimation(long timeLeft, long originalTTL){
+        // Out of 1000, figure out where we should start
+        long scaledStart = 0;
+        scaledStart = timeLeft * (1000/originalTTL);
+
+        ProgressBar mProgressBar = (ProgressBar) findViewById(R.id.pb_loading);
+        ObjectAnimator progressAnimator = ObjectAnimator.ofInt(mProgressBar, "progress", (int) scaledStart, 0);
+        progressAnimator.setDuration(timeLeft * 1000);
+        progressAnimator.setInterpolator(new LinearInterpolator());
+        progressAnimator.start();
     }
 }

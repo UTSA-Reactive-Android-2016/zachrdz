@@ -1,6 +1,6 @@
 package com.csandroid.myfirstapp.stages;
 
-import com.csandroid.myfirstapp.Notification;
+import com.csandroid.myfirstapp.utils.Notification;
 import com.csandroid.myfirstapp.utils.WebHelper;
 
 import org.json.JSONArray;

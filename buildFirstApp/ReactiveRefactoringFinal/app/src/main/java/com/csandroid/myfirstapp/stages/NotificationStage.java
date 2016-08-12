@@ -1,6 +1,6 @@
 package com.csandroid.myfirstapp.stages;
 
-import com.csandroid.myfirstapp.Notification;
+import com.csandroid.myfirstapp.utils.Notification;
 import com.csandroid.myfirstapp.utils.WebHelper;
 
 import org.json.JSONArray;
@@ -37,13 +37,18 @@ public class NotificationStage implements Func1<Integer, Observable<Notification
             for (int i = 0 ; i < notifiers.length(); i++) {
                 JSONObject notification = notifiers.getJSONObject(i);
                 String type = notification.getString("type");
-                String username = notification.getString("username");
-                System.out.println("ZACH: type: " + type + ", username: " + username);
+                String username = "";
 
                 if(type.equals("login")){
+                    username = notification.getString("username");
                     notifications.add(new Notification.LogIn(username));
                 } else if(type.equals("logout")){
+                    username = notification.getString("username");
                     notifications.add(new Notification.LogOut(username));
+                } else if(type.equals("message")){
+                    JSONObject message = notification.getJSONObject("content");
+                    System.out.println("ZACH: message: " + message.toString());
+                    notifications.add(new Notification.Message(message));
                 }
             }
 

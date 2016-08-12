@@ -1,16 +1,9 @@
 package com.csandroid.myfirstapp.stages;
 
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.csandroid.myfirstapp.Notification;
-import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.models.UserInfo;
 import com.csandroid.myfirstapp.utils.WebHelper;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
-
-import java.util.ArrayList;
 
 import rx.Observable;
 import rx.functions.Func1;

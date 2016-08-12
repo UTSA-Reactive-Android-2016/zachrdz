@@ -4,46 +4,45 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.volley.VolleyError;
 import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.adapters.MessageAdapter;
-import com.csandroid.myfirstapp.api.core.ServerAPI;
-import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.db.MessageDBHandler;
-import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.models.Message;
+import com.csandroid.myfirstapp.stages.NotificationStage;
 import com.csandroid.myfirstapp.utils.Crypto;
+import com.csandroid.myfirstapp.utils.Notification;
 import com.csandroid.myfirstapp.utils.WebHelper;
 
 import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import rx.Notification;
+import javax.crypto.SecretKey;
+
 import rx.Observable;
 import rx.Observer;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 import rx.subscriptions.CompositeSubscription;
 
@@ -51,17 +50,14 @@ public class MainActivity extends AppCompatActivity {
 
     LocalKeyPairDBHandler localKeyPairDB;
     LocalKeyPair localKeyPair;
-    List<Contact> contactsList;
-    //ServerAPI.Listener serverAPIListener;
 
-    //ServerAPI serverAPI;
     Crypto myCrypto;
-    private final static int mInterval = 1000 * 3; // 3 seconds
-    private Handler mHandler;
 
     private RecyclerView recView;
     private List<Message> recList;
     private MessageAdapter mAdapter;
+    private LinearLayoutManager llm;
+    ScheduledFuture updateFuture;
 
     // Subscription holder
     private CompositeSubscription cs = new CompositeSubscription();
@@ -82,10 +78,11 @@ public class MainActivity extends AppCompatActivity {
         // Setup recycler view/list
         this.setupRecyclerView();
 
-        if(loggedIn) {
+        if(loggedIn){
             this.initServer();
-            //this.initMessageStatusPoll();
         }
+
+        this.updateLoginMsg(loggedIn);
     }
 
     // Menu icons are inflated just as they were with actionbar
@@ -143,11 +140,7 @@ public class MainActivity extends AppCompatActivity {
 
         this.setupRecyclerView();
         this.initServer();
-
-        if(loggedIn) {
-            //initServerAPI();
-            //initMessageStatusPoll();
-        }
+        this.updateLoginMsg(loggedIn);
     }
 
     @Override
@@ -156,11 +149,11 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         Boolean loggedIn = prefs.getBoolean("loggedIn", false);
 
-        if(loggedIn) {
-            //unregisterServerAPIListener();
-            //stopRepeatingTask();
-        }
         cs.unsubscribe();
+        if (updateFuture != null) {
+            updateFuture.cancel(true);
+            updateFuture = null;
+        }
     }
 
     @Override
@@ -168,31 +161,37 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         cs.unsubscribe();
         cs = null;
+
+        if (updateFuture != null) {
+            updateFuture.cancel(true);
+            updateFuture = null;
+        }
     }
 
     public void initServer(){
         // Logged in User setup for server
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String username = prefs.getString("username","");
+        final String username = prefs.getString("username","");
         String hostName = prefs.getString("serverName", "");
         String portNumber = prefs.getString("serverPort", "");
         PublicKey serverKey = Crypto.getPublicKeyFromString(prefs.getString("serverKey", ""));
         final String server = "http://" + hostName + ":" + portNumber;
         Boolean loggedIn = prefs.getBoolean("loggedIn", false);
 
-        localKeyPairDB = new LocalKeyPairDBHandler(this);
-        localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
-        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPrivateKey,localKeyPair.getPrivateKey()).apply();
-        getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey,localKeyPair.getPublicKey()).apply();
-
-        myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
-
-        final TextView serverMsgBanner = (TextView) findViewById(R.id.serverMsg);
-
         if(loggedIn) {
+
+            localKeyPairDB = new LocalKeyPairDBHandler(this);
+            localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
+            getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPrivateKey,localKeyPair.getPrivateKey()).apply();
+            getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey,localKeyPair.getPublicKey()).apply();
+
+            myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
+
+            final TextView serverMsgBanner = (TextView) findViewById(R.id.serverMsg);
+
             Log.d("ZachLOG: ", "logged in");
-            // Poll to continuously check that connection with server is alive
-            Subscription serverConn = Observable.interval(0, 5, TimeUnit.SECONDS, Schedulers.newThread())
+            // Poll to continuously check that connection with server is alive and clean up msgs
+            Subscription serverConn = Observable.interval(0, 1, TimeUnit.SECONDS, Schedulers.newThread())
                 .subscribeOn(AndroidSchedulers.mainThread())
                 .observeOn(Schedulers.io())
                 .subscribe(new Observer<Long>() {
@@ -214,6 +213,9 @@ public class MainActivity extends AppCompatActivity {
                                 public void run() {
                                     if (serverMsgBanner != null)
                                         serverMsgBanner.setVisibility(View.GONE);
+
+                                    cleanUpMessages();
+
                                 }
                             });
                         } catch (Exception e) {
@@ -231,117 +233,52 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
             cs.add(serverConn);
+
+            Subscription messageStatus = Observable.interval(0, 2, TimeUnit.SECONDS, Schedulers.newThread())
+                    .subscribeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Observer<Long>() {
+                        @Override
+                        public void onCompleted() {
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                        }
+
+                        @Override
+                        public void onNext(Long numTicks) {
+                            Observable.just(0)
+                                    .subscribeOn(AndroidSchedulers.mainThread())
+                                    .observeOn(Schedulers.io())
+                                    .flatMap(new NotificationStage(server, username))
+                                    .subscribe(new Observer<Notification>() {
+                                        @Override
+                                        public void onCompleted() {
+
+                                        }
+
+                                        @Override
+                                        public void onError(Throwable e) {
+
+                                        }
+
+                                        @Override
+                                        public void onNext(final Notification notification) {
+                                            runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    handleMessageStatus(notification);
+                                                }
+                                            });
+                                        }
+                                    });
+                            Log.d("POLL", "Polling Message Status...");
+                        }
+                    });
+            cs.add(messageStatus);
+
         }
 
-
-
-        //serverAPI = ServerAPI.getInstance(this.getApplicationContext(), myCrypto);
-        //serverAPI.setServerName(hostName);
-        //serverAPI.setServerPort(portNumber);
-
-        //this.registerServerAPIListener();
-    }
-
-    private void registerServerAPIListener(){
-        final  MessageDBHandler dbMessage = new MessageDBHandler(this);
-        final ContactDBHandler dbContact = new ContactDBHandler(this);
-        /*
-        serverAPI.registerListener(serverAPIListener = new ServerAPI.Listener() {
-            @Override
-            public void onCommandFailed(String commandName, VolleyError volleyError) {
-                Toast.makeText(MainActivity.this,String.format("command %s failed!",commandName),
-                        Toast.LENGTH_SHORT).show();
-                volleyError.printStackTrace();
-            }
-
-            @Override
-            public void onGoodAPIVersion() {}
-
-            @Override
-            public void onBadAPIVersion() {}
-
-            @Override
-            public void onRegistrationSucceeded() {}
-
-            @Override
-            public void onRegistrationFailed(String reason) {}
-
-            @Override
-            public void onLoginSucceeded() {}
-
-            @Override
-            public void onLoginFailed(String reason) {}
-
-            @Override
-            public void onLogoutSucceeded() { }
-
-            @Override
-            public void onLogoutFailed(String reason) {}
-
-            @Override
-            public void onUserInfo(ServerAPI.UserInfo info) {}
-
-            @Override
-            public void onUserNotFound(String username) {}
-
-            @Override
-            public void onContactLogin(String username) {}
-
-            @Override
-            public void onContactLogout(String username) {}
-
-            @Override
-            public void onSendMessageSucceeded(Object key) {}
-
-            @Override
-            public void onSendMessageFailed(Object key, String reason) {}
-
-            @Override
-            public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {
-                Message newMessage = new Message(localKeyPair.getId(),sender,subject,body, (int) (born_on_date/1000L), (int) (time_to_live/1000L));
-                int messageId = dbMessage.addMessage(newMessage);
-                recList.add(dbMessage.getMessage(messageId));
-                mAdapter.notifyItemInserted(recList.size() - 1);
-            }
-        });
-        */
-    }
-
-    private void unregisterServerAPIListener(){
-        //serverAPI.unregisterListener(serverAPIListener);
-    }
-
-    public void initMessageStatusPoll(){
-        mHandler = new Handler();
-        startRepeatingTask();
-    }
-
-    Runnable mStatusChecker = new Runnable() {
-        @Override
-        public void run() {
-            try {
-                doStartPushListener();
-            } finally {
-                // 100% guarantee that this always happens, even if
-                // your update method throws an exception
-                mHandler.postDelayed(mStatusChecker, mInterval);
-            }
-        }
-    };
-
-    void startRepeatingTask() {
-        mStatusChecker.run();
-    }
-
-    void stopRepeatingTask() {
-        mHandler.removeCallbacks(mStatusChecker);
-    }
-
-    public void doStartPushListener() {
-        // Logged in User setup for serverAPI
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String username = prefs.getString("username","");
-        //serverAPI.startPushListener(username);
     }
 
     private List<Message> getMessageListFromDB() {
@@ -361,8 +298,9 @@ public class MainActivity extends AppCompatActivity {
 
             // Clean up messages
             for (Message message : this.recList) {
-                Boolean expired = ((int) (System.currentTimeMillis() / 1000L) > message.getCreatedAt() + message.getTTL());
+                Boolean expired = ((int) (System.currentTimeMillis() / 1000L) > (message.getCreatedAt() + message.getTTL()));
                 if (expired) {
+                    Log.d("LOGG", "expired!!!");
                     db.deleteMessage(message);
                 }
             }
@@ -377,7 +315,7 @@ public class MainActivity extends AppCompatActivity {
         recView = (RecyclerView) findViewById(R.id.main_cards_list);
         if(null != recView) {
             recView.setHasFixedSize(true);
-            LinearLayoutManager llm = new LinearLayoutManager(this);
+            llm = new LinearLayoutManager(this);
             llm.setOrientation(LinearLayoutManager.VERTICAL);
             recView.setLayoutManager(llm);
 
@@ -385,6 +323,99 @@ public class MainActivity extends AppCompatActivity {
             recView.setAdapter(this.mAdapter);
             recView.invalidate();
             mAdapter.notifyDataSetChanged();
+        }
+    }
+
+    private void handleMessageStatus(Notification notification){
+        JSONObject message = null;
+
+        // handle updating state here
+        Log.d("LOG", "Next " + notification);
+        if (notification instanceof Notification.Message) {
+            message = ((Notification.Message) notification).message;
+            handleMessage(message);
+        }
+    }
+
+    private String decryptAES64ToString(String aes64, SecretKey aesKey) throws UnsupportedEncodingException {
+        byte[] bytes = Base64.decode(aes64,Base64.NO_WRAP);
+        if(bytes==null) return null;
+        bytes = Crypto.decryptAES(bytes, aesKey);
+        if(bytes==null) return null;
+        return new String(bytes,"UTF-8");
+    }
+
+    private void handleMessage(JSONObject message){
+        String LOG = "MESSAGE_HANDLER";
+        Log.d(LOG,"Got message "+message);
+        final  MessageDBHandler dbMessage = new MessageDBHandler(this);
+        try{
+            SecretKey aesKey = Crypto.getAESSecretKeyFromBytes(myCrypto.decryptRSA(Base64.decode(message.getString("aes-key"),Base64.NO_WRAP)));
+            String sender = decryptAES64ToString(message.getString("sender"),aesKey);
+            String recipient = decryptAES64ToString(message.getString("recipient"),aesKey);
+            String body = decryptAES64ToString(message.getString("body"),aesKey);
+            String subject = decryptAES64ToString(message.getString("subject-line"),aesKey);
+            Long born = Long.parseLong(decryptAES64ToString(message.getString("born-on-date"),aesKey));
+            Long ttl = Long.parseLong(decryptAES64ToString(message.getString("time-to-live"),aesKey));
+            Log.d(LOG,sender+" says:");
+            Log.d(LOG,subject+":");
+            Log.d(LOG,body);
+            Log.d(LOG,"ttl: "+ttl);
+
+            Message newMessage;
+
+            long adjustedTTL = ((born/1000L) + (ttl/1000L)) - (System.currentTimeMillis()/1000L);
+            if(adjustedTTL < 0){
+                // This message is already expired when received, so born date will be current system time.
+                newMessage = new Message(localKeyPair.getId(),sender,subject,body, (int) (ttl/1000L));
+            } else{
+                // Born date will be what was specified in message.
+                newMessage = new Message(localKeyPair.getId(),sender,subject,body, (int) (born/1000L), (int) (ttl/1000L));
+            }
+
+            // Grab the message Id, it is returned from db call after insertion. Add to recList.
+            int messageId = dbMessage.addMessage(newMessage);
+            recList.add(dbMessage.getMessage(messageId));
+            mAdapter.notifyItemInserted(recList.size() - 1);
+        } catch (Exception e) {
+            Log.d(LOG,"Failed to parse message",e);
+        }
+
+    }
+
+    public void cleanUpMessages(){
+        MessageDBHandler db = new MessageDBHandler(getApplicationContext());
+        int i = 0;
+        ArrayList<Integer> indexesToRemove = new ArrayList<>();
+        // Clean up messages
+        for (Message message : recList) {
+            Boolean expired = ((int) (System.currentTimeMillis() / 1000L) > (message.getCreatedAt() + message.getTTL()));
+            if (expired) {
+                db.deleteMessage(message);
+                indexesToRemove.add(i);
+            }
+            i++;
+        }
+
+        for(int index:indexesToRemove){
+            try {
+                recList.remove(index);
+                mAdapter.notifyItemRemoved(index);
+                mAdapter.notifyItemRangeChanged(index, recList.size());
+            } catch(IndexOutOfBoundsException e){
+                Log.d("LOG", e.toString());
+            }
+        }
+    }
+
+    public void updateLoginMsg(boolean loggedIn){
+        TextView notLoggedInView = (TextView) findViewById(R.id.not_logged_in);
+
+        if(loggedIn && null != notLoggedInView) {
+            notLoggedInView.setVisibility(View.GONE);
+
+        } else if(null != notLoggedInView){
+            notLoggedInView.setVisibility(View.VISIBLE);
         }
     }
 }

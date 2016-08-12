@@ -18,7 +18,9 @@
     tools:context=".activities.SettingsActivity"
     tools:showIn="@layout/activity_settings"
     android:descendantFocusability="beforeDescendants"
-    android:focusableInTouchMode="true">
+    android:focusableInTouchMode="true"
+    android:backgroundTint="@color/abc_search_url_text"
+    android:clickable="true">
 
     <EditText
         android:layout_width="fill_parent"
@@ -40,9 +42,10 @@
         android:id="@+id/userImage"
         android:layout_below="@+id/servername"
         android:layout_centerHorizontal="true"
-        android:background="@android:drawable/ic_menu_my_calendar"
+        android:background="@drawable/select_image_custom"
         android:layout_marginTop="20dp"
-        android:tag="uImage"/>
+        android:tag="uImage"
+        android:backgroundTint="#ddd" />
 
     <EditText
         android:layout_width="fill_parent"

@@ -12,6 +12,16 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <ProgressBar
+            android:id="@+id/pb_loading"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:indeterminate="false"
+            android:progress="1000"
+            android:max="1000"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:progressDrawable="@drawable/my_progress_bar" />
+
         <TextView
             android:id="@+id/sender"
             android:layout_width="match_parent"
@@ -21,7 +31,8 @@
             android:gravity="center_vertical"
             android:textColor="@android:color/black"
             android:padding="5dp"
-            android:textSize="14dp"/>
+            android:textSize="14dp"
+            android:layout_below="@id/pb_loading"/>
 
         <TextView
             android:id="@+id/subject"
@@ -44,7 +55,7 @@
             android:layout_alignParentTop="true"
             android:layout_alignParentRight="true"
             android:layout_alignParentEnd="true"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="16dp"
             android:layout_marginRight="20dp" />
 
     </RelativeLayout>

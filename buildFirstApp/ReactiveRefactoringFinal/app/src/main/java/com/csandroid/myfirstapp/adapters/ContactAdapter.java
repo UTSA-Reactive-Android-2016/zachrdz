@@ -13,9 +13,10 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.activities.ComposeActivity;
 import com.csandroid.myfirstapp.activities.EditContactActivity;
-import com.csandroid.myfirstapp.R;
+import com.csandroid.myfirstapp.ext.CircleTransform;
 import com.csandroid.myfirstapp.models.Contact;
 
 import java.io.ByteArrayOutputStream;
@@ -38,8 +39,9 @@ public class ContactAdapter extends RecyclerView.Adapter<ContactAdapter.ContactV
     @Override
     public void onBindViewHolder(ContactViewHolder contactViewHolder, int i) {
         final Contact contact = contactList.get(i);
+        CircleTransform ct = new CircleTransform();
         contactViewHolder.vUsername.setText(contact.getUsername());
-        contactViewHolder.vUserImage.setImageBitmap(decodeBase64(contact.getUserImage()));
+        contactViewHolder.vUserImage.setImageBitmap(ct.transform(decodeBase64(contact.getUserImage())));
         this.initOnClickListeners(contactViewHolder, contact);
     }
 

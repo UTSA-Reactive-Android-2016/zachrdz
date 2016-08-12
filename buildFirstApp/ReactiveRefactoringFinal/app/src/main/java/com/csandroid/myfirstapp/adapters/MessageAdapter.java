@@ -1,18 +1,19 @@
 package com.csandroid.myfirstapp.adapters;
 
+import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.LinearInterpolator;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.csandroid.myfirstapp.R;
 import com.csandroid.myfirstapp.activities.ReadMessageActivity;
-import com.csandroid.myfirstapp.db.MessageDBHandler;
 import com.csandroid.myfirstapp.models.Message;
 
 import java.util.List;
@@ -38,10 +39,14 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
         messageViewHolder.message = messageList.get(i);
         messageViewHolder.vSender.setText(messageViewHolder.message.getSenderUsername());
         messageViewHolder.vSubject.setText(messageViewHolder.message.getSubject());
-        messageViewHolder.vTTL.setText(String.valueOf(messageViewHolder.message.getTTL()));
+        messageViewHolder.vTTL.setText("TTL: " + String.valueOf(messageViewHolder.message.getTTL() + " sec"));
 
         this.initOnClickListeners(messageViewHolder);
-        this.setupCountdownTimer(messageViewHolder);
+        long timeLeft = (messageViewHolder.message.getCreatedAt() + messageViewHolder.message.getTTL()) - (System.currentTimeMillis()/1000L);
+        if(timeLeft < 0){
+            timeLeft = 0;
+        }
+        messageViewHolder.startAnimation(timeLeft, messageViewHolder.message.getTTL());
         this.onBind = false;
     }
 
@@ -54,6 +59,8 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
         return new MessageViewHolder(itemView);
     }
 
+
+
     public static class MessageViewHolder extends RecyclerView.ViewHolder {
 
         protected TextView vSender;
@@ -61,7 +68,6 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
         protected TextView vTTL;
         protected View view;
         protected Message message;
-        protected CountDownTimer countDownTimer;
 
         public MessageViewHolder(View v) {
             super(v);
@@ -70,6 +76,18 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
             vSubject = (TextView) v.findViewById(R.id.subject);
             vTTL = (TextView) v.findViewById(R.id.ttl);
             view = v;
+        }
+
+        public void startAnimation(long timeLeft, long originalTTL){
+            // Out of 1000, figure out where we should start
+            long scaledStart = 0;
+            scaledStart = timeLeft * (1000/originalTTL);
+
+            ProgressBar mProgressBar = (ProgressBar) view.findViewById(R.id.pb_loading);
+            ObjectAnimator progressAnimator = ObjectAnimator.ofInt(mProgressBar, "progress", (int) scaledStart, 0);
+            progressAnimator.setDuration(timeLeft * 1000);
+            progressAnimator.setInterpolator(new LinearInterpolator());
+            progressAnimator.start();
         }
     }
 
@@ -94,52 +112,5 @@ public class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.MessageV
                 context.startActivity(intent);
             }
         });
-    }
-
-    private void setupCountdownTimer(final MessageViewHolder mvh){
-
-        // Get the current time
-        final int currTime = (int) (System.currentTimeMillis() / 1000L);
-        final int createdAt = mvh.message.getCreatedAt();
-        // Determine remaining ttl
-        final int ttl = mvh.message.getTTL();
-
-        // Check if message should be deleted or shown
-        boolean stillAlive = (createdAt + ttl) > currTime;
-
-        if(stillAlive) {
-            if(null == mvh.countDownTimer) {
-                final int ttlInMillis = ((createdAt + ttl) - currTime) * 1000;
-
-                mvh.countDownTimer = new CountDownTimer(ttlInMillis, 1000) {
-                    public void onTick(long millisUntilFinished) {
-                        String tickText = "TTL: " + millisUntilFinished / 1000 + " sec";
-                        mvh.vTTL.setText(tickText);
-                    }
-
-                    public void onFinish() {
-                        this.cancel();
-                        deleteMessageAndNotify(mvh);
-                    }
-                }.start();
-            }
-        } else{
-            if(null != mvh.countDownTimer){
-                mvh.countDownTimer.cancel();
-            }
-            deleteMessageAndNotify(mvh);
-        }
-    }
-
-    private void deleteMessageAndNotify(MessageViewHolder mvh){
-        if(!onBind && mvh.getAdapterPosition() > -1) {
-            // Delete message and notify adapter, will reload list.
-            MessageDBHandler db = new MessageDBHandler(mvh.view.getContext());
-            db.deleteMessage(mvh.message);
-            //int index = messageList.indexOf(mvh.message);
-
-            messageList.remove(mvh.getAdapterPosition());
-            this.notifyItemRemoved(mvh.getAdapterPosition());
-        }
     }
 }

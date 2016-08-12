@@ -20,21 +20,16 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.volley.VolleyError;
 import com.csandroid.myfirstapp.R;
-import com.csandroid.myfirstapp.api.core.ServerAPI;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.models.UserInfo;
-import com.csandroid.myfirstapp.stages.GetServerKeyStage;
 import com.csandroid.myfirstapp.stages.GetUserInfoStage;
-import com.csandroid.myfirstapp.stages.RegistrationStage;
 import com.csandroid.myfirstapp.utils.Crypto;
 
 import java.io.ByteArrayOutputStream;
-import java.security.PublicKey;
 import java.util.HashMap;
 
 import rx.Observable;
@@ -46,12 +41,10 @@ import rx.subscriptions.CompositeSubscription;
 
 public class AddContactActivity extends AppCompatActivity {
 
-    //ServerAPI serverAPI;
     LocalKeyPairDBHandler localKeyPairDB;
     LocalKeyPair localKeyPair;
     Crypto myCrypto;
     HashMap<String,UserInfo> myUserMap = new HashMap<>();
-    //ServerAPI.Listener serverAPIListener;
 
     // Subscription holder
     CompositeSubscription cs = new CompositeSubscription();
@@ -62,6 +55,7 @@ public class AddContactActivity extends AppCompatActivity {
         setContentView(R.layout.activity_add_contact);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        setTitle("Add New Contact");
         if(null != getSupportActionBar()){
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }

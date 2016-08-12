@@ -25,39 +25,24 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.volley.VolleyError;
 import com.csandroid.myfirstapp.R;
-import com.csandroid.myfirstapp.api.core.ServerAPI;
 import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
 import com.csandroid.myfirstapp.stages.GetChallengeStage;
 import com.csandroid.myfirstapp.stages.GetServerKeyStage;
 import com.csandroid.myfirstapp.stages.LogInStage;
 import com.csandroid.myfirstapp.stages.LogOutStage;
-import com.csandroid.myfirstapp.stages.RegisterContactsStage;
 import com.csandroid.myfirstapp.stages.RegistrationStage;
 import com.csandroid.myfirstapp.utils.Crypto;
-import com.csandroid.myfirstapp.Notification;
-import com.google.android.gms.appindexing.Action;
-import com.google.android.gms.appindexing.AppIndex;
-import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
 import java.security.PublicKey;
-import java.util.concurrent.TimeUnit;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 import rx.Observer;
@@ -222,17 +207,7 @@ public class SettingsActivity extends AppCompatActivity {
             // with associated values if that username exists locally, else empty those fields.
             usernameField.addTextChangedListener(new TextWatcher() {
                 @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    // Upon change of field, automatically log out user if they are logged in
-                    Boolean loggedIn = getPreferences(Context.MODE_PRIVATE).getBoolean("loggedIn", false);
-
-                    if (loggedIn) {
-                        doLogout();
-                        Toast.makeText(getApplicationContext(),
-                                "You were logged out due to username change.",
-                                Toast.LENGTH_SHORT).show();
-                    }
-                }
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
                 @Override
                 public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -251,7 +226,7 @@ public class SettingsActivity extends AppCompatActivity {
                         getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPrivateKey, localKeyPair.getPrivateKey()).apply();
                         getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey, localKeyPair.getPublicKey()).apply();
 
-                        // Update myCrypto and in turn update ServerAPI with it
+                        // Update myCrypto
                         myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
                     } else {
                         setPrivateKeyFieldValue("");
@@ -265,17 +240,7 @@ public class SettingsActivity extends AppCompatActivity {
             // When the user edits the servername text field, log them out if they are logged in
             serverNameField.addTextChangedListener(new TextWatcher() {
                 @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    // Upon change of field, automatically log out user if they are logged in
-                    Boolean loggedIn = getPreferences(Context.MODE_PRIVATE).getBoolean("loggedIn", false);
-
-                    if (loggedIn) {
-                        doLogout();
-                        Toast.makeText(getApplicationContext(),
-                                "You were logged out due to server address change.",
-                                Toast.LENGTH_SHORT).show();
-                    }
-                }
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
                 @Override
                 public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -438,7 +403,7 @@ public class SettingsActivity extends AppCompatActivity {
                                 @Override
                                 public void run() {
                                     Log.d("ZachLog","Error: Registration",fe);
-                                    Toast.makeText(SettingsActivity.this, "Not registered!", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(SettingsActivity.this, "Not registered! Server Unavailable.", Toast.LENGTH_SHORT).show();
                                 }
                             });
                         }
@@ -586,7 +551,7 @@ public class SettingsActivity extends AppCompatActivity {
                                 @Override
                                 public void run() {
                                     Log.d("ZachLog", "Error: Logout", fe);
-                                    Toast.makeText(SettingsActivity.this, "Not logged out!", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(SettingsActivity.this, "Not logged out! Server Unavailable.", Toast.LENGTH_SHORT).show();
                                 }
                             });
                         }

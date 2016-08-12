@@ -9,6 +9,7 @@ import android.preference.PreferenceManager;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -17,23 +18,37 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import com.android.volley.VolleyError;
 import com.csandroid.myfirstapp.R;
-import com.csandroid.myfirstapp.api.core.ServerAPI;
 import com.csandroid.myfirstapp.db.ContactDBHandler;
 import com.csandroid.myfirstapp.db.LocalKeyPairDBHandler;
 import com.csandroid.myfirstapp.models.Contact;
 import com.csandroid.myfirstapp.models.LocalKeyPair;
+import com.csandroid.myfirstapp.stages.SendMessageStage;
 import com.csandroid.myfirstapp.utils.Crypto;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.UnsupportedEncodingException;
+import java.security.PublicKey;
+
+import javax.crypto.SecretKey;
+
+import rx.Observable;
+import rx.Observer;
+import rx.Subscription;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
+import rx.subscriptions.CompositeSubscription;
 
 public class ComposeActivity extends AppCompatActivity {
 
-    ServerAPI serverAPI;
     LocalKeyPairDBHandler localKeyPairDB;
     LocalKeyPair localKeyPair;
     Crypto myCrypto;
-    ServerAPI.Listener serverAPIListener;
+
     private long ttlSelected;
+    private CompositeSubscription cs = new CompositeSubscription();
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +56,7 @@ public class ComposeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_compose);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        setTitle("Compose");
 
         if(null != getSupportActionBar()){
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -48,7 +64,7 @@ public class ComposeActivity extends AppCompatActivity {
 
         this.initOnClickListeners();
         this.populateFields();
-        this.initServerAPI();
+        this.initServer();
     }
 
     @Override
@@ -93,12 +109,7 @@ public class ComposeActivity extends AppCompatActivity {
                     // Encrypt this message with their public key.
                     if(message.length() > 0 && null != contact &&
                             null != contact.getPublicKey() && contact.getPublicKey().length() > 0){
-                        Intent composeIntent = new Intent(ComposeActivity.this, MainActivity.class);
-
                         doSendMessageToUser();
-
-                        composeIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        startActivity(composeIntent);
                     } else if(message.length() > 0){
                         // Default message if not encrypted (i.e. non-existing contact specified)
                         String toastTitle = "Error: ";
@@ -129,7 +140,7 @@ public class ComposeActivity extends AppCompatActivity {
             ttlBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    final CharSequence colors[] = new CharSequence[]{"5", "15", "60"};
+                    final CharSequence colors[] = new CharSequence[]{"5", "15", "30", "60"};
 
                     AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
                     builder.setTitle("Pick a TTL for this message (seconds):");
@@ -169,12 +180,10 @@ public class ComposeActivity extends AppCompatActivity {
         }
     }
 
-    public void initServerAPI(){
+    public void initServer(){
         // Logged in User setup for serverAPI
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String username = prefs.getString("username","");
-        String hostName = prefs.getString("serverName", "");
-        String portNumber = prefs.getString("serverPort", "");
 
         localKeyPairDB = new LocalKeyPairDBHandler(this);
         localKeyPair = localKeyPairDB.getKeyPairByUsername(username);
@@ -182,87 +191,6 @@ public class ComposeActivity extends AppCompatActivity {
         getPreferences(Context.MODE_PRIVATE).edit().putString(Crypto.prefPublicKey,localKeyPair.getPublicKey()).apply();
 
         myCrypto = new Crypto(getPreferences(Context.MODE_PRIVATE));
-        serverAPI = ServerAPI.getInstance(this.getApplicationContext(), myCrypto);
-        serverAPI.setServerName(hostName);
-        serverAPI.setServerPort(portNumber);
-
-        this.registerServerAPIListener();
-    }
-
-    private void registerServerAPIListener(){
-        serverAPI.registerListener(serverAPIListener = new ServerAPI.Listener() {
-            @Override
-            public void onCommandFailed(String commandName, VolleyError volleyError) {
-                Toast.makeText(ComposeActivity.this,String.format("command %s failed!",commandName),
-                        Toast.LENGTH_SHORT).show();
-                volleyError.printStackTrace();
-            }
-
-            @Override
-            public void onGoodAPIVersion() {}
-
-            @Override
-            public void onBadAPIVersion() {}
-
-            @Override
-            public void onRegistrationSucceeded() {}
-
-            @Override
-            public void onRegistrationFailed(String reason) {}
-
-            @Override
-            public void onLoginSucceeded() {}
-
-            @Override
-            public void onLoginFailed(String reason) {}
-
-            @Override
-            public void onLogoutSucceeded() {}
-
-            @Override
-            public void onLogoutFailed(String reason) {}
-
-            @Override
-            public void onUserInfo(ServerAPI.UserInfo info) {}
-
-            @Override
-            public void onUserNotFound(String username) {}
-
-            @Override
-            public void onContactLogin(String username) {}
-
-            @Override
-            public void onContactLogout(String username) {}
-
-            @Override
-            public void onSendMessageSucceeded(Object key) {
-                Toast.makeText(ComposeActivity.this,String.format("sent a message"),Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onSendMessageFailed(Object key, String reason) {
-                Toast.makeText(ComposeActivity.this,String.format("failed to send a message"),Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onMessageDelivered(String sender, String recipient, String subject, String body, long born_on_date, long time_to_live) {}
-        });
-    }
-
-    private void unregisterServerAPIListener(){
-        serverAPI.unregisterListener(serverAPIListener);
-    }
-
-    @Override
-    public void onResume(){
-        super.onResume();
-        registerServerAPIListener();
-    }
-
-    @Override
-    public void onPause(){
-        super.onPause();
-        unregisterServerAPIListener();
     }
 
     public void doSendMessageToUser(){
@@ -272,18 +200,86 @@ public class ComposeActivity extends AppCompatActivity {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String sender = prefs.getString("username","");
+        String hostName = prefs.getString("serverName", "");
+        String portNumber = prefs.getString("serverPort", "");
+        PublicKey serverKey = Crypto.getPublicKeyFromString(prefs.getString("serverKey", ""));
+        final String server = "http://" + hostName + ":" + portNumber;
+
         long ttl = (ttlSelected != 0) ? ttlSelected * 1000 : 15000;
 
         if(contact != null) {
-            serverAPI.sendMessage(new Object(), // I don't have an object to keep track of, but I need one!
-                    Crypto.getPublicKeyFromString(contact.getPublicKey()),
-                    sender,
-                    recipient,
-                    getSubjectFieldValue(),
-                    getBodyFieldValue(),
-                    System.currentTimeMillis(),
-                    ttl);
-            Log.d("TTLZACH", Long.toString(ttl));
+
+            SecretKey aesKey = Crypto.createAESKey();
+            byte[] aesKeyBytes = aesKey.getEncoded();
+            if(aesKeyBytes==null){
+                Log.d("LOG","AES key failed (this should never happen)");
+                return;
+            }
+            String base64encryptedAESKey =
+                    Base64.encodeToString(Crypto.encryptRSA(
+                            aesKeyBytes,
+                            Crypto.getPublicKeyFromString(contact.getPublicKey()
+                            )
+                    ), Base64.NO_WRAP);
+
+            // Attempt to send message
+            Subscription sendMessageSub = Observable.just("ok")
+                    .subscribeOn(AndroidSchedulers.mainThread())
+                    .observeOn(Schedulers.io())
+                    .flatMap(new SendMessageStage(server, recipient,
+                            keyValuePairs(
+                                "aes-key", base64encryptedAESKey,
+                                "sender",  base64AESEncrypted(sender, aesKey),
+                                "recipient",  base64AESEncrypted(recipient, aesKey),
+                                "subject-line",  base64AESEncrypted(getSubjectFieldValue(), aesKey),
+                                "body",  base64AESEncrypted(getBodyFieldValue(), aesKey),
+                                "born-on-date",  base64AESEncrypted(Long.valueOf(System.currentTimeMillis()).toString(), aesKey),
+                                "time-to-live",  base64AESEncrypted(Long.valueOf(ttl).toString(), aesKey)
+                            )
+                    ))
+                    .subscribe(new Observer<String>() {
+                        @Override
+                        public void onCompleted() {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {}
+                            });
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                            final Throwable fe = e;
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Log.d("ZachLog","Error: Send Message",fe);
+                                    Toast.makeText(ComposeActivity.this,String.format("Network Error: failed to send"),Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onNext(final String response) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if(response.equals("ok")){
+                                        Toast.makeText(ComposeActivity.this,String.format("sent a message"),Toast.LENGTH_SHORT).show();
+
+                                        // Message was sent, go back to main screen
+                                        Intent composeIntent = new Intent(ComposeActivity.this, MainActivity.class);
+                                        composeIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                        startActivity(composeIntent);
+                                    } else{
+                                        Toast.makeText(ComposeActivity.this,String.format("Failed to send message"),Toast.LENGTH_SHORT).show();
+                                        Toast.makeText(ComposeActivity.this,String.format("User is offline"),Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+                            });
+                        }
+                    });
+
+            cs.add(sendMessageSub);
         } else {
             Log.d("Main",recipient + " info not available");
         }
@@ -315,4 +311,48 @@ public class ComposeActivity extends AppCompatActivity {
             return "";
         }
     }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        cs = new CompositeSubscription();
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        cs.unsubscribe();
+        cs = null;
+    }
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        if(null != cs){
+            cs.unsubscribe();
+        }
+        cs = null;
+    }
+
+    private JSONObject keyValuePairs(String... args){
+        JSONObject json = new JSONObject();
+        try {
+            for(int i=0; i+1<args.length;i+=2){
+                json.put(args[i],args[i+1]);
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return json;
+    }
+
+    private String base64AESEncrypted(String clearText, SecretKey aesKey){
+        try {
+            return Base64.encodeToString(Crypto.encryptAES(clearText.getBytes("UTF-8"),aesKey), Base64.NO_WRAP);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
 }

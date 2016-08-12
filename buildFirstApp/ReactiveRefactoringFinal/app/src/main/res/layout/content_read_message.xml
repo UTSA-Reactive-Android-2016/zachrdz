@@ -18,24 +18,40 @@
     tools:context=".activities.ReadMessageActivity"
     tools:showIn="@layout/activity_read_message">
 
+    <ProgressBar
+        android:id="@+id/pb_loading"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:indeterminate="false"
+        android:progress="1000"
+        android:max="1000"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:progressDrawable="@drawable/my_progress_bar"
+        android:layout_alignParentStart="false"
+        android:layout_alignParentTop="false" />
+
     <TextView
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:id="@+id/msg_sender"
         android:text="Sender"
-        android:layout_alignParentTop="true"
+        android:layout_below="@+id/pb_loading"
+        android:layout_alignParentTop="false"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="false"
-        android:layout_toLeftOf="@+id/msg_ttl" />
+        android:layout_toLeftOf="@+id/msg_ttl"
+        android:layout_marginTop="8dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="TTL"
         android:id="@+id/msg_ttl"
-        android:layout_alignParentTop="true"
+        android:layout_below="@+id/pb_loading"
+        android:layout_alignParentTop="false"
         android:layout_alignParentRight="true"
-        android:layout_marginRight="50dp" />
+        android:layout_marginRight="50dp"
+        android:layout_marginTop="8dp" />
 
     <TextView
         android:layout_width="wrap_content"
